@@ -7,228 +7,7 @@
 <meta name="description" content="검색하면 광고만 나오는 맛집 찾기. 오늘뭐먹지는 협찬 리뷰를 걸러내고 내 취향에 맞춘 가게를 3초 만에 보여줍니다.">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<style>
-/* ============================================================
-   오늘뭐먹지 — Landing
-   Design tokens: design.md 참조
-   ============================================================ */
-
-:root{
-  --ink:#221A14; --ink-2:#6E5F53; --ink-3:rgba(34,26,20,.45);
-  --cream:#FFF7EE; --peach:#FFEADC; --white:#FFFFFF;
-  --tomato:#E8400F; --tomato-soft:#FF6B35; --tangerine:#FF9F1C;
-  --butter:#FFD34D; --basil:#1F9D55;
-  --line:rgba(34,26,20,.10);
-
-  --r-pill:999px; --r-lg:28px; --r-md:18px;
-  --shadow-sm:0 2px 8px rgba(34,26,20,.06);
-  --shadow-md:0 12px 32px rgba(34,26,20,.10);
-  --shadow-lg:0 24px 64px rgba(232,64,15,.16);
-
-  --ease:cubic-bezier(.2,.7,.3,1);
-  --pad:clamp(20px,5vw,48px);
-  --sec:clamp(72px,12vw,160px);
-}
-
-*,*::before,*::after{box-sizing:border-box}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-body{
-  margin:0; background:var(--cream); color:var(--ink);
-  font-family:'Pretendard Variable','Pretendard',-apple-system,'Apple SD Gothic Neo','Segoe UI',system-ui,sans-serif;
-  font-size:16px; font-weight:500; line-height:1.7;
-  letter-spacing:-.005em; overflow-x:hidden;
-  -webkit-font-smoothing:antialiased;
-  /* 한글은 어절 단위로 줄바꿈 */
-  word-break:keep-all; overflow-wrap:break-word;
-}
-img,svg{display:block;max-width:100%}
-button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
-a{color:inherit;text-decoration:none}
-:focus-visible{outline:3px solid var(--tomato);outline-offset:3px;border-radius:6px}
-
-.wrap{max-width:1200px;margin:0 auto;padding-inline:var(--pad)}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-
-/* ---------- Type ---------- */
-.display{font-size:clamp(2.3rem,5.6vw,4.4rem);font-weight:900;letter-spacing:-.045em;line-height:1.08;margin:0}
-.h1{font-size:clamp(1.85rem,4.4vw,3.25rem);font-weight:800;letter-spacing:-.035em;line-height:1.16;margin:0;text-wrap:balance}
-.h2{font-size:clamp(1.35rem,3vw,2.1rem);font-weight:800;letter-spacing:-.025em;line-height:1.25;margin:0}
-.lead{font-size:1.125rem;color:var(--ink-2);line-height:1.65;max-width:34em;margin:0}
-.label{font-size:.8125rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tomato);margin:0 0 16px}
-.hl{background:linear-gradient(transparent 62%,var(--butter) 62%);padding:0 .06em}
-
-/* ---------- Buttons ---------- */
-.btn{
-  display:inline-flex;align-items:center;gap:10px;justify-content:center;
-  padding:18px 34px;border-radius:var(--r-pill);font-weight:700;font-size:1.0625rem;
-  letter-spacing:-.01em;min-height:56px;transition:transform .22s var(--ease),box-shadow .22s var(--ease),background .22s var(--ease);
-}
-.btn-primary{background:var(--tomato);color:#fff;box-shadow:var(--shadow-md)}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
-.btn-primary:active{transform:translateY(0)}
-.btn-ghost{border:1.5px solid var(--ink);color:var(--ink)}
-.btn-ghost:hover{background:var(--ink);color:var(--cream)}
-.btn-sm{padding:12px 22px;min-height:44px;font-size:.9375rem;gap:0}
-.btn-note{display:block;margin-top:14px;font-size:.875rem;color:var(--ink-3)}
-
-/* ---------- Header ---------- */
-header{position:sticky;top:0;z-index:50;background:rgba(255,247,238,.82);backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s var(--ease)}
-header.stuck{border-bottom-color:var(--line)}
-.nav{display:flex;align-items:center;justify-content:space-between;height:72px;gap:12px}
-.logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:1.1875rem;letter-spacing:-.04em;flex:none}
-@media(max-width:560px){
-  .nav{height:64px}
-  .logo{font-size:1.0625rem}
-  .nav .btn-sm{padding:10px 16px;min-height:42px;font-size:.875rem}
-  .hide-sm{display:none}
-}
-
-/* ---------- Hero ---------- */
-.hero{position:relative;padding-top:clamp(48px,8vw,88px);padding-bottom:var(--sec);overflow:hidden}
-.blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.32;pointer-events:none;z-index:0}
-.blob-a{width:520px;height:520px;background:var(--tangerine);top:-180px;right:-140px}
-.blob-b{width:420px;height:420px;background:var(--tomato-soft);top:280px;left:-200px;opacity:.22}
-.blob-c{width:360px;height:360px;background:var(--butter);bottom:-120px;right:20%;opacity:.28}
-.hero .wrap{position:relative;z-index:1}
-.hero-grid{display:grid;grid-template-columns:1fr;gap:clamp(48px,7vw,72px);align-items:center}
-@media(min-width:960px){.hero-grid{grid-template-columns:1.05fr .95fr}}
-.eyebrow{display:inline-flex;align-items:center;gap:8px;background:var(--white);border:1px solid var(--line);
-  border-radius:var(--r-pill);padding:8px 16px;font-size:.875rem;font-weight:600;color:var(--ink-2);box-shadow:var(--shadow-sm);margin-bottom:26px}
-.eyebrow b{color:var(--tomato);font-weight:800}
-.hero .display{margin-bottom:24px}
-.hero .lead{margin-bottom:36px}
-.hero-cta{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
-
-/* floating cards */
-.stack{display:grid;gap:14px}
-.fcard{background:var(--white);border-radius:var(--r-lg);box-shadow:var(--shadow-md);
-  padding:20px;border:1px solid var(--line)}
-@media(min-width:960px){
-  .stack{display:block;position:relative;height:560px}
-  .fcard{position:absolute;width:66%;animation:float 7s var(--ease) infinite}
-  .fcard:nth-child(1){top:0;left:0;animation-delay:0s;rotate:-2.5deg}
-  .fcard:nth-child(2){top:196px;right:0;animation-delay:-2.3s;rotate:2deg;z-index:2}
-  .fcard:nth-child(3){top:392px;left:6%;animation-delay:-4.6s;rotate:-1.5deg}
-}
-@keyframes float{0%,100%{translate:0 -9px}50%{translate:0 9px}}
-.fcard .top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-.thumb{width:46px;height:46px;border-radius:14px;flex:none;display:grid;place-items:center}
-.fname{font-weight:800;letter-spacing:-.02em;line-height:1.3}
-.fmeta{font-size:.8125rem;color:var(--ink-3);font-weight:600}
-.fsum{font-size:.9375rem;color:var(--ink-2);line-height:1.55;margin:0}
-.tag{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;font-weight:700;padding:5px 11px;border-radius:var(--r-pill);margin-top:12px}
-.tag-ok{background:rgba(31,157,85,.12);color:var(--basil)}
-.tag-fit{background:rgba(232,64,15,.10);color:var(--tomato)}
-
-/* ---------- Ticker ---------- */
-.ticker{background:var(--ink);color:var(--cream);padding:18px 0;overflow:hidden;white-space:nowrap}
-.ticker-inner{display:inline-flex;gap:44px;animation:slide 30s linear infinite;font-weight:800;font-size:1.0625rem;letter-spacing:-.02em}
-.ticker span{display:inline-flex;align-items:center;gap:44px}
-.ticker i{font-style:normal;color:var(--butter)}
-@keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-
-/* ---------- Sections ---------- */
-section{position:relative}
-.sec{padding-block:var(--sec)}
-.sec-peach{background:var(--peach)}
-.sec-head{max-width:44rem;margin-bottom:clamp(40px,6vw,64px)}
-.sec-head .lead{margin-top:18px}
-
-/* ---------- Onboarding ---------- */
-.quiz{background:var(--white);border-radius:clamp(24px,4vw,40px);box-shadow:var(--shadow-md);
-  border:1px solid var(--line);padding:clamp(28px,5vw,56px);max-width:820px;margin:0 auto}
-.progress{height:6px;background:var(--peach);border-radius:var(--r-pill);overflow:hidden;margin-bottom:32px}
-.progress-bar{height:100%;background:var(--tomato);border-radius:var(--r-pill);width:0;transition:width .35s var(--ease)}
-.qstep{font-size:.8125rem;font-weight:700;letter-spacing:.06em;color:var(--tomato);margin:0 0 10px}
-.qtitle{font-size:clamp(1.5rem,3.6vw,2.25rem);font-weight:900;letter-spacing:-.035em;line-height:1.2;margin:0 0 28px}
-.chips{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-@media(min-width:600px){.chips{grid-template-columns:repeat(4,1fr)}}
-.chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
-  min-height:112px;padding:18px 12px;border:1.5px solid var(--line);border-radius:var(--r-md);
-  background:var(--white);font-weight:700;letter-spacing:-.02em;text-align:center;
-  transition:transform .12s var(--ease),border-color .18s var(--ease),background .18s var(--ease),color .18s var(--ease)}
-.chip:hover{border-color:var(--tomato);transform:translateY(-3px)}
-.chip.on{background:var(--tomato);color:#fff;border-color:var(--tomato);transform:scale(1.03)}
-.chip.on svg [stroke]{stroke:#fff}
-.chip.on svg [fill]:not([fill="none"]){fill:#fff}
-
-/* result */
-.result{display:none}
-.result.show{display:block;animation:pop .45s var(--ease)}
-@keyframes pop{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
-.rtype{display:inline-flex;align-items:center;gap:10px;background:var(--peach);border-radius:var(--r-pill);
-  padding:10px 20px;font-weight:800;color:var(--tomato);margin-bottom:18px;font-size:.9375rem}
-.rtitle{font-size:clamp(1.6rem,4vw,2.4rem);font-weight:900;letter-spacing:-.04em;line-height:1.15;margin:0 0 12px}
-.rdesc{color:var(--ink-2);margin:0 0 30px;line-height:1.65}
-.rcards{display:grid;gap:14px;margin-bottom:34px}
-@media(min-width:700px){.rcards{grid-template-columns:repeat(3,1fr)}}
-.rcard{border:1px solid var(--line);border-radius:var(--r-md);padding:18px;background:var(--cream);
-  transition:transform .22s var(--ease),box-shadow .22s var(--ease)}
-.rcard:hover{transform:translateY(-6px);box-shadow:var(--shadow-md)}
-.rcard .fname{margin-bottom:4px}
-.gate{background:var(--cream);border:1px dashed rgba(232,64,15,.35);border-radius:var(--r-md);padding:24px}
-.gate p{margin:0 0 16px;font-weight:700;letter-spacing:-.02em}
-.form{display:flex;flex-direction:column;gap:10px}
-@media(min-width:560px){.form{flex-direction:row}}
-.form input{flex:1;min-height:56px;padding:0 20px;border-radius:var(--r-pill);border:1.5px solid var(--line);
-  background:var(--white);font:inherit;font-weight:600;color:var(--ink)}
-.form input::placeholder{color:var(--ink-3);font-weight:500}
-.form input:focus{border-color:var(--tomato);outline:none}
-.thanks{display:none;align-items:center;gap:10px;color:var(--basil);font-weight:800;margin-top:14px}
-.thanks.show{display:flex}
-.restart{margin-top:18px;font-size:.875rem;color:var(--ink-3);font-weight:600;text-decoration:underline;text-underline-offset:3px}
-
-/* ---------- Steps ---------- */
-.steps{display:grid;gap:clamp(24px,4vw,32px)}
-@media(min-width:820px){.steps{grid-template-columns:repeat(3,1fr)}}
-.step{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:clamp(26px,3.5vw,36px);
-  position:relative;overflow:hidden;transition:transform .22s var(--ease),box-shadow .22s var(--ease)}
-.step:hover{transform:translateY(-6px);box-shadow:var(--shadow-md)}
-.step-n{font-size:4.5rem;font-weight:900;letter-spacing:-.06em;line-height:1;color:var(--peach);position:absolute;top:14px;right:22px}
-.step-ico{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;margin-bottom:22px}
-.step h3{font-size:1.3125rem;font-weight:800;letter-spacing:-.03em;margin:0 0 10px}
-.step p{margin:0;color:var(--ink-2);font-size:.9688rem;line-height:1.6}
-
-/* ---------- Trust ---------- */
-.trust-grid{display:grid;gap:20px;align-items:stretch}
-@media(min-width:900px){.trust-grid{grid-template-columns:1fr 1fr;gap:28px}}
-.panel{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:clamp(24px,3.4vw,34px)}
-.panel-head{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.02em;margin-bottom:20px;font-size:1.0625rem}
-.rev{border-radius:var(--r-md);padding:18px;margin-bottom:12px;font-size:.9375rem;line-height:1.6}
-.rev:last-of-type{margin-bottom:0}
-.rev-out{background:rgba(34,26,20,.04);color:var(--ink-3)}
-.rev-out .rev-txt{text-decoration:line-through;text-decoration-thickness:1.5px}
-.rev-in{background:rgba(31,157,85,.07);border:1px solid rgba(31,157,85,.18)}
-.rev-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-.flag{font-size:.75rem;font-weight:700;padding:4px 10px;border-radius:var(--r-pill);background:rgba(34,26,20,.07);color:var(--ink-2)}
-.flag-ok{background:rgba(31,157,85,.14);color:var(--basil)}
-.trust-note{margin-top:28px;font-size:.9375rem;color:var(--ink-2);max-width:44em}
-
-/* ---------- Final CTA ---------- */
-.final{background:var(--ink);color:var(--cream);border-radius:clamp(28px,4vw,44px);
-  padding:clamp(48px,8vw,96px) clamp(28px,5vw,64px);text-align:center;position:relative;overflow:hidden}
-.final .blob{opacity:.55;filter:blur(90px)}
-.final-in{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center}
-.final .display{margin-bottom:20px}
-.final .lead{color:rgba(255,247,238,.72);margin:0 auto 36px;text-align:center}
-
-/* ---------- Footer ---------- */
-footer{padding-block:48px;border-top:1px solid var(--line);margin-top:clamp(56px,8vw,104px)}
-.foot{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;align-items:center;
-  font-size:.875rem;color:var(--ink-3);font-weight:600}
-.foot nav{display:flex;gap:22px;flex-wrap:wrap}
-.foot nav a:hover{color:var(--tomato)}
-
-/* ---------- Reveal ---------- */
-.rv{opacity:0;transform:translateY(24px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
-.rv.in{opacity:1;transform:none}
-
-@media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
-  html{scroll-behavior:auto}
-  .rv{opacity:1;transform:none}
-}
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -237,14 +16,17 @@ footer{padding-block:48px;border-top:1px solid var(--line);margin-top:clamp(56px
   <div class="wrap nav">
     <a class="logo" href="#top">
       <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <path d="M4 14h24c0 7-5.4 12-12 12S4 21 4 14Z" fill="#E8400F"/>
+        <path d="M4 14h24c0 7-5.4 12-12 12S4 21 4 14Z" fill="#FF385C"/>
         <ellipse cx="16" cy="14" rx="12" ry="2.6" fill="#FF9F1C"/>
         <path d="M11 9c1.6-1.4 1.6-2.6 0-4M16 9c1.6-1.4 1.6-2.6 0-4M21 9c1.6-1.4 1.6-2.6 0-4"
-              stroke="#221A14" stroke-width="2" stroke-linecap="round"/>
+              stroke="#222222" stroke-width="2" stroke-linecap="round"/>
       </svg>
       오늘뭐먹지
     </a>
-    <a class="btn btn-primary btn-sm" href="#quiz"><span class="hide-sm">3초 만에&nbsp;</span>내 취향 찾기</a>
+    <div class="nav-actions">
+      <a class="btn btn-ghost btn-sm" href="save.html">맛집 담기</a>
+      <a class="btn btn-primary btn-sm" href="#quiz"><span class="hide-sm">3초 만에&nbsp;</span>내 취향 찾기</a>
+    </div>
   </div>
 </header>
 
@@ -259,7 +41,7 @@ footer{padding-block:48px;border-top:1px solid var(--line);margin-top:clamp(56px
       <div>
         <span class="eyebrow">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <circle cx="8" cy="8" r="6" fill="#E8400F"/><circle cx="8" cy="8" r="2.4" fill="#FFD34D"/>
+            <circle cx="8" cy="8" r="6" fill="#FF385C"/><circle cx="8" cy="8" r="2.4" fill="#FFD34D"/>
           </svg>
           <b>광고 없는</b> 맛집 찾기</span>
         <h1 class="display">오늘 점심,<br>또 검색만<br>하다 끝났나요?</h1>
@@ -284,7 +66,7 @@ footer{padding-block:48px;border-top:1px solid var(--line);margin-top:clamp(56px
           <div class="top">
             <div class="thumb" style="background:rgba(255,159,28,.18)">
               <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
-                <path d="M5 15h22c0 6.6-5 11-11 11S5 21.6 5 15Z" stroke="#E8400F" stroke-width="2.5" stroke-linejoin="round"/>
+                <path d="M5 15h22c0 6.6-5 11-11 11S5 21.6 5 15Z" stroke="#FF385C" stroke-width="2.5" stroke-linejoin="round"/>
                 <path d="M11 11c1.4-1.4 1.4-2.6 0-4M16 11c1.4-1.4 1.4-2.6 0-4M21 11c1.4-1.4 1.4-2.6 0-4"
                       stroke="#FF9F1C" stroke-width="2.5" stroke-linecap="round"/>
               </svg>
@@ -300,9 +82,9 @@ footer{padding-block:48px;border-top:1px solid var(--line);margin-top:clamp(56px
 
         <article class="fcard">
           <div class="top">
-            <div class="thumb" style="background:rgba(232,64,15,.12)">
+            <div class="thumb" style="background:rgba(255,56,92,.12)">
               <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
-                <rect x="12" y="6" width="9" height="19" rx="4.5" transform="rotate(14 12 6)" stroke="#E8400F" stroke-width="2.5"/>
+                <rect x="12" y="6" width="9" height="19" rx="4.5" transform="rotate(14 12 6)" stroke="#FF385C" stroke-width="2.5"/>
                 <path d="M13 7c-1-2.4.4-3.6 2.6-3" stroke="#1F9D55" stroke-width="2.5" stroke-linecap="round"/>
               </svg>
             </div>
@@ -319,7 +101,7 @@ footer{padding-block:48px;border-top:1px solid var(--line);margin-top:clamp(56px
           <div class="top">
             <div class="thumb" style="background:rgba(255,211,77,.28)">
               <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
-                <path d="M7 11h15v9a5 5 0 0 1-5 5h-5a5 5 0 0 1-5-5v-9Z" stroke="#221A14" stroke-width="2.5" stroke-linejoin="round"/>
+                <path d="M7 11h15v9a5 5 0 0 1-5 5h-5a5 5 0 0 1-5-5v-9Z" stroke="#222222" stroke-width="2.5" stroke-linejoin="round"/>
                 <path d="M22 14h2.5a3 3 0 0 1 0 6H22" stroke="#FF9F1C" stroke-width="2.5" stroke-linecap="round"/>
               </svg>
             </div>
@@ -396,9 +178,9 @@ footer{padding-block:48px;border-top:1px solid var(--line);margin-top:clamp(56px
     <div class="steps">
       <article class="step rv">
         <span class="step-n">1</span>
-        <div class="step-ico" style="background:rgba(232,64,15,.10)">
+        <div class="step-ico" style="background:rgba(255,56,92,.10)">
           <svg width="34" height="34" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-            <circle cx="16" cy="16" r="11" stroke="#E8400F" stroke-width="2.5"/>
+            <circle cx="16" cy="16" r="11" stroke="#FF385C" stroke-width="2.5"/>
             <path d="M16 5v11l7 4" stroke="#FF9F1C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
@@ -410,7 +192,7 @@ footer{padding-block:48px;border-top:1px solid var(--line);margin-top:clamp(56px
         <span class="step-n">2</span>
         <div class="step-ico" style="background:rgba(255,159,28,.16)">
           <svg width="34" height="34" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-            <path d="M5 16h22c0 6.4-4.9 10.5-11 10.5S5 22.4 5 16Z" stroke="#E8400F" stroke-width="2.5" stroke-linejoin="round"/>
+            <path d="M5 16h22c0 6.4-4.9 10.5-11 10.5S5 22.4 5 16Z" stroke="#FF385C" stroke-width="2.5" stroke-linejoin="round"/>
             <path d="M11 12c1.4-1.4 1.4-2.6 0-4M16 12c1.4-1.4 1.4-2.6 0-4M21 12c1.4-1.4 1.4-2.6 0-4"
                   stroke="#FF9F1C" stroke-width="2.5" stroke-linecap="round"/>
           </svg>
@@ -536,18 +318,18 @@ footer{padding-block:48px;border-top:1px solid var(--line);margin-top:clamp(56px
 <script>
 /* ---------- 아이콘 (기하 도형 → 음식) ---------- */
 const ICO = {
-  bowl:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M5 15h22c0 6.6-5 11-11 11S5 21.6 5 15Z" stroke="#E8400F" stroke-width="2.5" stroke-linejoin="round"/><ellipse cx="16" cy="15" rx="11" ry="2" fill="none" stroke="#FF9F1C" stroke-width="2.5"/></svg>`,
+  bowl:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M5 15h22c0 6.6-5 11-11 11S5 21.6 5 15Z" stroke="#FF385C" stroke-width="2.5" stroke-linejoin="round"/><ellipse cx="16" cy="15" rx="11" ry="2" fill="none" stroke="#FF9F1C" stroke-width="2.5"/></svg>`,
   leaf:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M25 7C13 7 7 12 7 19a6 6 0 0 0 6 6c7 0 12-6 12-18Z" stroke="#1F9D55" stroke-width="2.5" stroke-linejoin="round"/><path d="M21 11 9 23" stroke="#1F9D55" stroke-width="2.5" stroke-linecap="round"/></svg>`,
-  chili:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="11" y="7" width="9" height="19" rx="4.5" transform="rotate(12 11 7)" stroke="#E8400F" stroke-width="2.5"/><path d="M12 8c-1-2.4.5-3.6 2.7-3" stroke="#1F9D55" stroke-width="2.5" stroke-linecap="round"/></svg>`,
-  noodle:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M5 17h22c0 6-4.9 9.6-11 9.6S5 23 5 17Z" stroke="#E8400F" stroke-width="2.5" stroke-linejoin="round"/><path d="M11 13c1.5-1.4 1.5-2.8 0-4.2M16 13c1.5-1.4 1.5-2.8 0-4.2M21 13c1.5-1.4 1.5-2.8 0-4.2" stroke="#FF9F1C" stroke-width="2.5" stroke-linecap="round"/></svg>`,
-  one:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="11" r="5" stroke="#E8400F" stroke-width="2.5"/><path d="M7 27a9 9 0 0 1 18 0" stroke="#E8400F" stroke-width="2.5" stroke-linecap="round"/></svg>`,
-  two:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="11" cy="12" r="4.5" stroke="#E8400F" stroke-width="2.5"/><circle cx="22" cy="12" r="4.5" stroke="#FF9F1C" stroke-width="2.5"/><path d="M4 26a7.5 7.5 0 0 1 14 0M17 26a7.5 7.5 0 0 1 11 0" stroke="#E8400F" stroke-width="2.5" stroke-linecap="round"/></svg>`,
-  many:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="9" cy="11" r="3.6" stroke="#E8400F" stroke-width="2.5"/><circle cx="16" cy="9" r="3.6" stroke="#FF9F1C" stroke-width="2.5"/><circle cx="23" cy="11" r="3.6" stroke="#E8400F" stroke-width="2.5"/><path d="M3 25a6.5 6.5 0 0 1 12 0M17 25a6.5 6.5 0 0 1 12 0" stroke="#E8400F" stroke-width="2.5" stroke-linecap="round"/></svg>`,
-  heart:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 26S5.5 19.8 5.5 13.2A5.8 5.8 0 0 1 16 9.5a5.8 5.8 0 0 1 10.5 3.7C26.5 19.8 16 26 16 26Z" stroke="#E8400F" stroke-width="2.5" stroke-linejoin="round"/></svg>`,
-  coin:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="10.5" stroke="#E8400F" stroke-width="2.5"/><path d="M16 10v12M12.5 13.5h7M12.5 18.5h7" stroke="#FF9F1C" stroke-width="2.5" stroke-linecap="round"/></svg>`,
-  walk:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="18" cy="6.5" r="3" stroke="#E8400F" stroke-width="2.5"/><path d="M18 11v7l4 4M18 18l-5 3-2 6M18 13l5 3" stroke="#E8400F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  clock:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="10.5" stroke="#E8400F" stroke-width="2.5"/><path d="M16 9v7.5l5 3" stroke="#FF9F1C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  cup:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M7 11h15v9a5 5 0 0 1-5 5h-5a5 5 0 0 1-5-5v-9Z" stroke="#E8400F" stroke-width="2.5" stroke-linejoin="round"/><path d="M22 14h2.5a3 3 0 0 1 0 6H22" stroke="#FF9F1C" stroke-width="2.5" stroke-linecap="round"/></svg>`
+  chili:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="11" y="7" width="9" height="19" rx="4.5" transform="rotate(12 11 7)" stroke="#FF385C" stroke-width="2.5"/><path d="M12 8c-1-2.4.5-3.6 2.7-3" stroke="#1F9D55" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+  noodle:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M5 17h22c0 6-4.9 9.6-11 9.6S5 23 5 17Z" stroke="#FF385C" stroke-width="2.5" stroke-linejoin="round"/><path d="M11 13c1.5-1.4 1.5-2.8 0-4.2M16 13c1.5-1.4 1.5-2.8 0-4.2M21 13c1.5-1.4 1.5-2.8 0-4.2" stroke="#FF9F1C" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+  one:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="11" r="5" stroke="#FF385C" stroke-width="2.5"/><path d="M7 27a9 9 0 0 1 18 0" stroke="#FF385C" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+  two:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="11" cy="12" r="4.5" stroke="#FF385C" stroke-width="2.5"/><circle cx="22" cy="12" r="4.5" stroke="#FF9F1C" stroke-width="2.5"/><path d="M4 26a7.5 7.5 0 0 1 14 0M17 26a7.5 7.5 0 0 1 11 0" stroke="#FF385C" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+  many:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="9" cy="11" r="3.6" stroke="#FF385C" stroke-width="2.5"/><circle cx="16" cy="9" r="3.6" stroke="#FF9F1C" stroke-width="2.5"/><circle cx="23" cy="11" r="3.6" stroke="#FF385C" stroke-width="2.5"/><path d="M3 25a6.5 6.5 0 0 1 12 0M17 25a6.5 6.5 0 0 1 12 0" stroke="#FF385C" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+  heart:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 26S5.5 19.8 5.5 13.2A5.8 5.8 0 0 1 16 9.5a5.8 5.8 0 0 1 10.5 3.7C26.5 19.8 16 26 16 26Z" stroke="#FF385C" stroke-width="2.5" stroke-linejoin="round"/></svg>`,
+  coin:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="10.5" stroke="#FF385C" stroke-width="2.5"/><path d="M16 10v12M12.5 13.5h7M12.5 18.5h7" stroke="#FF9F1C" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+  walk:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="18" cy="6.5" r="3" stroke="#FF385C" stroke-width="2.5"/><path d="M18 11v7l4 4M18 18l-5 3-2 6M18 13l5 3" stroke="#FF385C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  clock:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="10.5" stroke="#FF385C" stroke-width="2.5"/><path d="M16 9v7.5l5 3" stroke="#FF9F1C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  cup:`<svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M7 11h15v9a5 5 0 0 1-5 5h-5a5 5 0 0 1-5-5v-9Z" stroke="#FF385C" stroke-width="2.5" stroke-linejoin="round"/><path d="M22 14h2.5a3 3 0 0 1 0 6H22" stroke="#FF9F1C" stroke-width="2.5" stroke-linecap="round"/></svg>`
 };
 
 /* ---------- 질문 ---------- */

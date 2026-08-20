@@ -1,0 +1,103 @@
+<!--
+  save.html — "맛집 담기" 페이지
+
+  ※ design 팀원 조율용 안내 ※
+  이 파일은 logic 팀원(server.py / save.js / storage.js 담당)이 작성했으며,
+  style.css / save.css / DESIGN.md 는 design 팀원 소유이므로 이 파일에는
+  class명만 부여하고 스타일은 전혀 넣지 않았습니다. 아래 class 구조를 기준으로
+  save.css에서 스타일링해주시면 됩니다.
+
+  최상위 구조
+  ─────────────────────────────────────────────
+  .save-page                     페이지 전체 래퍼
+  ├─ .save-header                페이지 상단 타이틀 영역
+  │  ├─ .save-header__title
+  │  └─ .save-header__subtitle
+  │
+  ├─ .search-panel                검색 입력 + 필터 영역
+  │  ├─ .search-panel__form       (form, submit 시 검색 실행)
+  │  │  ├─ .search-panel__input   키워드 검색 input
+  │  │  ├─ .search-panel__select  카테고리 필터 select
+  │  │  └─ .search-panel__submit  검색 버튼
+  │  └─ .search-panel__status     로딩/에러/안내 메시지 표시 (텍스트만 교체됨)
+  │
+  ├─ .search-results               검색 결과 리스트 영역
+  │  ├─ .search-results__title
+  │  └─ .place-card-list           카드들을 담는 컨테이너 (JS가 .place-card를 채워넣음)
+  │     └─ .place-card             (JS가 동적으로 생성하는 카드 — 아래 구조 참고)
+  │        ├─ .place-card__name
+  │        ├─ .place-card__category
+  │        ├─ .place-card__address
+  │        ├─ .place-card__phone       (전화번호 없으면 렌더링 안 함)
+  │        ├─ .place-card__link        (a 태그, 카카오 플레이스 링크)
+  │        └─ .place-card__save-btn    (button, "담기" / "담음" 토글)
+  │
+  └─ .saved-list                   담은 목록 영역
+     ├─ .saved-list__title
+     ├─ .saved-list__empty         목록이 비어있을 때 안내 문구 (JS가 표시/숨김 토글)
+     └─ .saved-list__items         (JS가 .saved-item을 채워넣음)
+        └─ .saved-item             (JS가 동적으로 생성하는 항목 — 아래 구조 참고)
+           ├─ .saved-item__name
+           ├─ .saved-item__address
+           └─ .saved-item__remove-btn  (button, 목록에서 제거)
+  ─────────────────────────────────────────────
+
+  data-* 속성:
+  - .place-card, .saved-item 에는 각각 data-place-id 속성을 부여해
+    JS에서 담기/제거 대상 식별에 사용합니다. (스타일링에는 사용되지 않음)
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>맛집 담기 | 오늘뭐먹지</title>
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="save.css" />
+</head>
+<body>
+<div class="save-page">
+  <header class="save-header">
+    <h1 class="save-header__title">맛집 담기</h1>
+    <p class="save-header__subtitle">키워드로 가게를 검색하고, 마음에 든 곳을 담아보세요.</p>
+  </header>
+
+  <section class="search-panel" aria-label="맛집 검색">
+    <form class="search-panel__form" id="search-form">
+      <input
+        type="text"
+        name="query"
+        class="search-panel__input"
+        id="search-input"
+        placeholder="가게 이름, 지역, 음식 종류로 검색"
+        autocomplete="off"
+        required
+      />
+      <select class="search-panel__select" id="category-select" name="category_group_code">
+        <option value="FD6">음식점</option>
+        <option value="CE7">카페</option>
+      </select>
+      <button type="submit" class="search-panel__submit">검색</button>
+    </form>
+    <p class="search-panel__status" id="search-status" role="status"></p>
+  </section>
+
+  <section class="search-results" aria-label="검색 결과">
+    <h2 class="search-results__title">검색 결과</h2>
+    <div class="place-card-list" id="place-card-list">
+      <!-- save.js가 검색 결과에 따라 .place-card 를 여기에 렌더링합니다 -->
+    </div>
+  </section>
+
+  <section class="saved-list" aria-label="담은 맛집 목록">
+    <h2 class="saved-list__title">담은 맛집</h2>
+    <p class="saved-list__empty" id="saved-list-empty">아직 담은 맛집이 없어요.</p>
+    <div class="saved-list__items" id="saved-list-items">
+      <!-- save.js가 localStorage 데이터를 기반으로 .saved-item 을 여기에 렌더링합니다 -->
+    </div>
+  </section>
+</div>
+
+<script type="module" src="save.js"></script>
+</body>
+</html>
