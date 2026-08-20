@@ -16,8 +16,12 @@ import {
   isPlaceSaved,
 } from "./storage.js";
 
-// server.py가 기본 실행되는 주소. 배포 환경에 맞게 필요 시 조정.
-const API_BASE_URL = "http://localhost:8000";
+// 로컬에서 server.py(파이썬 프록시)로 개발할 땐 localhost:8000을 호출하고,
+// Netlify 등 배포 환경에서는 같은 오리진의 /api/search(Netlify Functions로
+// 리다이렉트됨)를 상대 경로로 호출한다.
+const isLocalDev =
+  location.hostname === "localhost" || location.hostname === "127.0.0.1";
+const API_BASE_URL = isLocalDev ? "http://localhost:8000" : "";
 
 const searchForm = document.getElementById("search-form");
 const searchInput = document.getElementById("search-input");
