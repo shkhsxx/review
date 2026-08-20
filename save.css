@@ -14,6 +14,12 @@
 .save-page{background:var(--bg);min-height:100vh;padding-inline:clamp(20px,5vw,48px)}
 
 .save-header{padding-block:clamp(28px,5vw,48px) clamp(20px,3vw,32px)}
+.save-header__back{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:.9375rem;font-weight:700;color:var(--ink-2);
+  margin-bottom:16px;transition:color .16s ease;
+}
+.save-header__back:hover{color:var(--coral)}
 .save-header__title{font-size:clamp(1.6rem,3.6vw,2.25rem);font-weight:800;letter-spacing:-.03em;margin:0 0 8px}
 .save-header__subtitle{color:var(--ink-2);font-size:1rem;margin:0}
 
