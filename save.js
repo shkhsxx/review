@@ -51,6 +51,8 @@ const reviewPanelList = document.getElementById("review-panel-list");
 const reviewPanelMapLink = document.getElementById("review-panel-map-link");
 
 const reviewPanelAnalysis = document.getElementById("review-panel-analysis");
+const analysisToggle = document.getElementById("review-panel-analysis-toggle");
+const analysisBody = document.getElementById("review-panel-analysis-body");
 const analysisLoading = document.getElementById("review-panel-analysis-loading");
 const analysisError = document.getElementById("review-panel-analysis-error");
 const analysisContent = document.getElementById("review-panel-analysis-content");
@@ -407,11 +409,22 @@ function renderAnalysis(result) {
 /** 분석 영역을 초기 숨김 상태로 되돌린다(패널을 새로 열 때마다 호출). */
 function resetAnalysisPanel() {
   reviewPanelAnalysis.hidden = true;
+  analysisBody.hidden = true;
+  analysisToggle.textContent = "AI 리뷰 분석 보기";
+  analysisToggle.setAttribute("aria-expanded", "false");
   analysisLoading.hidden = true;
   analysisError.hidden = true;
   analysisContent.hidden = true;
   wordCloud.innerHTML = "";
   analysisSummary.textContent = "";
+}
+
+/** "AI 리뷰 분석 보기/접기" 토글 버튼 클릭 핸들러. */
+function toggleAnalysisBody() {
+  const willShow = analysisBody.hidden;
+  analysisBody.hidden = !willShow;
+  analysisToggle.textContent = willShow ? "AI 리뷰 분석 접기" : "AI 리뷰 분석 보기";
+  analysisToggle.setAttribute("aria-expanded", String(willShow));
 }
 
 /**
@@ -641,6 +654,7 @@ async function handleSearchSubmit(event) {
 function init() {
   searchForm.addEventListener("submit", handleSearchSubmit);
   reviewPanelCloseBtn.addEventListener("click", closeReviewPanel);
+  analysisToggle.addEventListener("click", toggleAnalysisBody);
   renderSavedList();
 }
 

@@ -191,6 +191,19 @@
 }
 .review-panel__analysis[hidden]{display:none}
 
+.review-panel__analysis-toggle{
+  align-self:flex-start;
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 16px;border-radius:var(--r-pill);border:1px solid var(--coral);
+  font-weight:700;font-size:.875rem;color:var(--coral);background:none;
+  transition:background .16s ease,color .16s ease;
+}
+.review-panel__analysis-toggle:hover{background:var(--coral-soft)}
+.review-panel__analysis-toggle::before{content:"✨";font-size:.8125rem}
+
+.review-panel__analysis-body{display:flex;flex-direction:column;gap:var(--sp-4);margin-top:var(--sp-1)}
+.review-panel__analysis-body[hidden]{display:none}
+
 .review-panel__analysis-loading,
 .review-panel__analysis-error{margin:0;text-align:center;padding:clamp(16px,3vw,28px) 16px;color:var(--ink-2);font-size:.9375rem}
 .review-panel__analysis-error{color:var(--coral-dark);font-weight:600}

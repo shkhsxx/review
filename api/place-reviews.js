@@ -87,7 +87,7 @@ async function searchCandidate(name, lat, lng, apiKey) {
 
 /** Place Details (New)로 화면 표시용 5개 필드(이름/별점/리뷰개수/리뷰/지도링크)를 가져온다. */
 async function fetchDetails(placeId, apiKey) {
-  const res = await fetch(`${DETAILS_BASE_URL}/${placeId}`, {
+  const res = await fetch(`${DETAILS_BASE_URL}/${placeId}?languageCode=ko`, {
     headers: {
       "X-Goog-Api-Key": apiKey,
       "X-Goog-FieldMask": DETAILS_FIELD_MASK,

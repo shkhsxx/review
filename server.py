@@ -358,7 +358,7 @@ def get_place_reviews(query_params):
 
     place_id = candidate.get("id")
     _, details = _call_places_new(
-        f"{PLACES_NEW_DETAILS_BASE_URL}/{place_id}",
+        f"{PLACES_NEW_DETAILS_BASE_URL}/{place_id}?languageCode=ko",
         api_key,
         PLACE_DETAILS_FIELD_MASK,
         method="GET",
