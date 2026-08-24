@@ -17,7 +17,7 @@ New Places API)를 프론트엔드(save.js)에서 바로 호출하지 못하도�
                               사용 설정(enable)해야 한다. 그렇지 않으면 구글이
                               403 PERMISSION_DENIED를 반환한다.
     GEMINI_API_KEY          Google AI Studio에서 발급받은 Gemini API 키 (필수, /api/analyze-reviews용)
-    GEMINI_MODEL            사용할 Gemini 모델명 (기본값: gemini-2.0-flash).
+    GEMINI_MODEL            사용할 Gemini 모델명 (기본값: gemini-3.6-flash).
                              ai.google.dev에서 최신 추천 모델을 확인해 필요하면 바꾼다.
     PORT                    서버 포트 (기본 8000)
 
@@ -99,7 +99,7 @@ PLACE_SEARCH_FIELD_MASK = "places.id,places.displayName,places.location"
 PLACE_DETAILS_FIELD_MASK = "displayName,rating,userRatingCount,reviews,googleMapsUri"
 
 # Gemini API (리뷰 감성분석) — 모델명은 환경변수로 오버라이드 가능
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 GEMINI_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 # Gemini structured output(responseSchema)에 강제할 JSON 스키마.

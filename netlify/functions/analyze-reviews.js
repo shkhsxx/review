@@ -4,7 +4,7 @@
 //
 // 환경변수 (Netlify 사이트 설정 > Environment variables):
 //   GEMINI_API_KEY   Google AI Studio에서 발급받은 Gemini API 키 (필수)
-//   GEMINI_MODEL     사용할 Gemini 모델명 (기본값: gemini-2.0-flash).
+//   GEMINI_MODEL     사용할 Gemini 모델명 (기본값: gemini-3.6-flash).
 //                     ai.google.dev에서 최신 추천 모델을 확인해 필요하면 바꿔준다.
 //
 // 배포 후 호출 경로: POST /api/analyze-reviews
@@ -18,7 +18,7 @@
 //   성공: { analyzed: true, result: { sentiment: {positive,neutral,negative}, keywords: [...], summary } }
 //   실패: { error: "..." } (4xx/5xx)
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 const geminiUrl = (model) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
