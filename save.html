@@ -2,7 +2,7 @@
   save.html — "맛집 담기" 페이지
 
   ※ design 팀원 조율용 안내 ※
-  이 파일은 logic 팀원(server.py / save.js / storage.js 담당)이 작성했으며,
+  이 파일은 logic 팀원(server.py / save.js / auth.js / saved-places.js 담당)이 작성했으며,
   style.css / save.css / DESIGN.md 는 design 팀원 소유이므로 이 파일에는
   class명만 부여하고 스타일은 전혀 넣지 않았습니다. 아래 class 구조를 기준으로
   save.css에서 스타일링해주시면 됩니다.
@@ -11,6 +11,9 @@
   ─────────────────────────────────────────────
   .save-page                     페이지 전체 래퍼
   ├─ .save-header                페이지 상단 타이틀 영역
+  │  ├─ .save-header__top         (뒤로가기 링크 + 로그인 위젯을 담는 상단 행)
+  │  │  ├─ .save-header__back
+  │  │  └─ .auth-slot             (auth-widget.js가 로그인 버튼/로그인 상태를 렌더링)
   │  ├─ .save-header__title
   │  └─ .save-header__subtitle
   │
@@ -85,7 +88,8 @@
 
   data-* 속성:
   - .place-card, .saved-item 에는 각각 data-place-id 속성을 부여해
-    JS에서 담기/제거 대상 식별에 사용합니다. (스타일링에는 사용되지 않음)
+    JS에서 담기/제거 대상 식별에 사용합니다. (saved_places 테이블의 place_id와 동일한
+    "kakao-<id>" | "google-<id>" 형식. 스타일링에는 사용되지 않음)
   - .place-card 에는 data-source 속성("kakao" | "google")도 부여됩니다.
     (식별용이지만 필요하면 [data-source="google"] 처럼 선택자로 스타일링에
     활용하셔도 됩니다.)
@@ -115,7 +119,10 @@
 <body>
 <div class="save-page">
   <header class="save-header">
-    <a class="save-header__back" href="index.html">← 홈으로</a>
+    <div class="save-header__top">
+      <a class="save-header__back" href="index.html">← 홈으로</a>
+      <div class="auth-slot" id="auth-slot"></div>
+    </div>
     <h1 class="save-header__title">맛집 담기</h1>
     <p class="save-header__subtitle">키워드로 가게를 검색하고, 마음에 든 곳을 담아보세요.</p>
   </header>
@@ -217,6 +224,8 @@
   </section>
 </div>
 
+<script type="module" src="auth-widget.js"></script>
+<script type="module" src="tabbar.js"></script>
 <script type="module" src="save.js"></script>
 </body>
 </html>

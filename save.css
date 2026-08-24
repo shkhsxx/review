@@ -14,10 +14,11 @@
 .save-page{background:var(--bg);min-height:100vh;padding-inline:clamp(20px,5vw,48px)}
 
 .save-header{padding-block:clamp(28px,5vw,48px) clamp(20px,3vw,32px)}
+.save-header__top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
 .save-header__back{
   display:inline-flex;align-items:center;gap:6px;
   font-size:.9375rem;font-weight:700;color:var(--ink-2);
-  margin-bottom:16px;transition:color .16s ease;
+  transition:color .16s ease;
 }
 .save-header__back:hover{color:var(--coral)}
 .save-header__title{font-size:clamp(1.6rem,3.6vw,2.25rem);font-weight:800;letter-spacing:-.03em;margin:0 0 8px}
@@ -125,7 +126,9 @@
   transition:background .16s ease,color .16s ease,border-color .16s ease,opacity .16s ease;
 }
 .place-card__save-btn:hover:not(:disabled){background:var(--bg-soft)}
-.place-card__save-btn:disabled{background:var(--ink);color:var(--bg);border-color:var(--ink);opacity:.9;cursor:default}
+.place-card__save-btn--saved{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.place-card__save-btn--saved:hover:not(:disabled){background:var(--ink)}
+.place-card__save-btn:disabled{opacity:.6;cursor:default}
 
 /* ---------- 리뷰 패널 (v0.4, logic 확정 구조 반영) ----------
    .review-panel은 모달이 아니라 .search-results와 .saved-list 사이에 놓이는

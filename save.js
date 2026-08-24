@@ -6,8 +6,9 @@
  * - 구글 결과는 카카오 문서 형태(place_name/address_name/id 등)에 맞춰 정규화한 뒤
  *   같은 .place-card 렌더링 로직을 재사용한다.
  * - 결과를 .place-card 로 렌더링한다.
- * - 카드의 "담기" 버튼은 storage.js의 savePlace()를 호출한다.
- * - 담은 목록(.saved-item)은 페이지 로드 시 + 변경 시마다 storage.js에서 다시 읽어 렌더링한다.
+ * - 카드의 "담기" 버튼은 saved-places.js(Supabase saved_places 테이블)를 호출한다.
+ *   로그인하지 않은 상태에서 누르면 안내와 함께 로그인 모달을 연다.
+ * - 담은 목록(.saved-item)은 페이지 로드 시 + 변경 시마다 saved-places.js에서 다시 읽어 렌더링한다.
  * - 카드를 클릭하면(저장 버튼/링크 클릭은 제외) server.py의 /api/place-reviews
  *   (구글 Places API (New) 프록시)를 호출해 .review-panel에 별점/리뷰를 보여준다.
  *   같은 가게를 다시 클릭하면 재요청 없이 sessionStorage 캐시를 바로 보여준다
@@ -19,12 +20,15 @@
  * ※ HTML class 구조는 save.html 상단 주석을 참고 (design 팀원과 공유된 구조).
  */
 
+import { getCurrentUser, onAuthChange } from "./auth.js";
+import { promptLogin } from "./auth-widget.js";
 import {
   getSavedPlaces,
   savePlace,
   removePlace,
   isPlaceSaved,
-} from "./storage.js";
+  waitForSavedPlaces,
+} from "./saved-places.js";
 
 // 로컬에서 server.py(파이썬 프록시)로 개발할 땐 localhost:8000을 호출하고,
 // Vercel 등 배포 환경에서는 같은 오리진의 /api/search(api/ 디렉토리의 Vercel
@@ -217,11 +221,20 @@ function normalizeGooglePlace(googlePlace) {
   };
 }
 
+/** place로부터 saved_places 테이블에서 쓰는 고유 id를 만든다("kakao-<id>" | "google-<id>"). */
+function getPlaceId(place) {
+  const prefix = place.source === "google" ? "google" : "kakao";
+  if (place.id) return `${prefix}-${place.id}`;
+  return `${prefix}-${place.place_name || ""}-${place.address_name || ""}`;
+}
+
 /** 검색 결과 한 건(place)을 .place-card DOM으로 변환 */
 function createPlaceCard(place) {
+  const placeId = getPlaceId(place);
+
   const card = document.createElement("article");
   card.className = "place-card";
-  card.dataset.placeId = place.id || "";
+  card.dataset.placeId = placeId;
   card.dataset.source = place.source || "kakao";
 
   if (place.source) {
@@ -275,17 +288,8 @@ function createPlaceCard(place) {
   const saveBtn = document.createElement("button");
   saveBtn.type = "button";
   saveBtn.className = "place-card__save-btn";
-  const alreadySaved = isPlaceSaved(place);
-  saveBtn.textContent = alreadySaved ? "담음" : "담기";
-  saveBtn.disabled = alreadySaved;
-  saveBtn.addEventListener("click", () => {
-    const { added } = savePlace(place);
-    if (added) {
-      saveBtn.textContent = "담음";
-      saveBtn.disabled = true;
-      renderSavedList();
-    }
-  });
+  setSaveButtonState(saveBtn, isPlaceSaved(placeId));
+  saveBtn.addEventListener("click", () => handleSaveClick(place, placeId, saveBtn));
   card.appendChild(saveBtn);
 
   // 카드를 클릭하면 리뷰 패널을 연다. 저장 버튼/링크 클릭은 각자의 동작을 우선한다.
@@ -295,6 +299,36 @@ function createPlaceCard(place) {
   });
 
   return card;
+}
+
+/** "담기" 버튼의 표시 상태(담음/담기)를 갱신한다. */
+function setSaveButtonState(btn, saved) {
+  btn.textContent = saved ? "담음" : "담기";
+  btn.classList.toggle("place-card__save-btn--saved", saved);
+}
+
+/** "담기"/"담음" 버튼 클릭 핸들러. 로그인하지 않았으면 안내와 함께 로그인 모달을 연다. */
+async function handleSaveClick(place, placeId, btn) {
+  if (!getCurrentUser()) {
+    promptLogin("로그인하면 담을 수 있어요.");
+    return;
+  }
+
+  btn.disabled = true;
+  try {
+    if (isPlaceSaved(placeId)) {
+      await removePlace(placeId);
+    } else {
+      await savePlace(place, placeId);
+    }
+    setSaveButtonState(btn, isPlaceSaved(placeId));
+    renderSavedList();
+  } catch (err) {
+    console.error("[save.js] 담기 처리 실패:", err);
+    setStatus(err.message || "담기 처리 중 오류가 발생했습니다.");
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 /** 검색 결과 목록을 렌더링 */
@@ -577,32 +611,36 @@ function closeReviewPanel() {
 function createSavedItem(entry) {
   const item = document.createElement("div");
   item.className = "saved-item";
-  item.dataset.placeId = entry.id;
+  item.dataset.placeId = entry.place_id;
 
   const name = document.createElement("p");
   name.className = "saved-item__name";
-  name.textContent = entry.name;
+  name.textContent = entry.place_name;
   item.appendChild(name);
 
   const address = document.createElement("p");
   address.className = "saved-item__address";
-  address.textContent = entry.roadAddress || entry.address || "";
+  address.textContent = entry.address || "";
   item.appendChild(address);
 
   const removeBtn = document.createElement("button");
   removeBtn.type = "button";
   removeBtn.className = "saved-item__remove-btn";
   removeBtn.textContent = "삭제";
-  removeBtn.addEventListener("click", () => {
-    removePlace(entry.id);
-    renderSavedList();
-    // 검색 결과에 같은 가게가 보이고 있다면 "담기" 버튼을 다시 활성화
-    const cardBtn = placeCardList.querySelector(
-      `.place-card[data-place-id="${CSS.escape(entry.placeId || "")}"] .place-card__save-btn`
-    );
-    if (cardBtn) {
-      cardBtn.textContent = "담기";
-      cardBtn.disabled = false;
+  removeBtn.addEventListener("click", async () => {
+    removeBtn.disabled = true;
+    try {
+      await removePlace(entry.place_id);
+      renderSavedList();
+      // 검색 결과에 같은 가게가 보이고 있다면 "담기" 버튼을 다시 되돌린다
+      const cardBtn = placeCardList.querySelector(
+        `.place-card[data-place-id="${CSS.escape(entry.place_id || "")}"] .place-card__save-btn`
+      );
+      if (cardBtn) setSaveButtonState(cardBtn, false);
+    } catch (err) {
+      console.error("[save.js] 담은 맛집 삭제 실패:", err);
+      removeBtn.disabled = false;
+      setStatus(err.message || "삭제 중 오류가 발생했습니다.");
     }
   });
   item.appendChild(removeBtn);
@@ -610,9 +648,9 @@ function createSavedItem(entry) {
   return item;
 }
 
-/** localStorage 기준으로 담은 목록 섹션 전체를 다시 그린다 */
-function renderSavedList() {
-  const list = getSavedPlaces();
+/** 로그인한 사용자가 Supabase에 담아둔 맛집 기준으로 목록 섹션 전체를 다시 그린다. */
+async function renderSavedList() {
+  const list = await getSavedPlaces();
   savedListItems.innerHTML = "";
 
   if (!list.length) {
@@ -624,9 +662,18 @@ function renderSavedList() {
   const fragment = document.createDocumentFragment();
   // 최근 담은 순으로 표시
   [...list]
-    .sort((a, b) => b.savedAt - a.savedAt)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     .forEach((entry) => fragment.appendChild(createSavedItem(entry)));
   savedListItems.appendChild(fragment);
+}
+
+/** 이미 렌더링된 검색 결과 카드들의 "담기" 버튼 상태를 현재 로그인 사용자 기준으로 다시 맞춘다. */
+async function refreshSaveButtons() {
+  await waitForSavedPlaces();
+  placeCardList.querySelectorAll(".place-card").forEach((card) => {
+    const btn = card.querySelector(".place-card__save-btn");
+    if (btn) setSaveButtonState(btn, isPlaceSaved(card.dataset.placeId));
+  });
 }
 
 async function handleSearchSubmit(event) {
@@ -643,7 +690,7 @@ async function handleSearchSubmit(event) {
   placeCardList.innerHTML = "";
 
   try {
-    const places = await fetchPlaces(query, categoryGroupCode);
+    const [places] = await Promise.all([fetchPlaces(query, categoryGroupCode), waitForSavedPlaces()]);
     renderPlaceCards(places);
   } catch (err) {
     console.error("[save.js] 검색 실패:", err);
@@ -655,6 +702,10 @@ function init() {
   searchForm.addEventListener("submit", handleSearchSubmit);
   reviewPanelCloseBtn.addEventListener("click", closeReviewPanel);
   analysisToggle.addEventListener("click", toggleAnalysisBody);
+  onAuthChange(() => {
+    renderSavedList();
+    refreshSaveButtons();
+  });
   renderSavedList();
 }
 

@@ -80,13 +80,71 @@ header.stuck{border-bottom-color:var(--border-soft)}
 .nav{display:flex;align-items:center;justify-content:space-between;height:72px;gap:12px}
 .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.1875rem;letter-spacing:-.03em;flex:none;color:var(--ink)}
 .nav-actions{display:flex;align-items:center;gap:10px}
+#pocket-link[hidden]{display:none}
 @media(max-width:560px){
   .nav{height:64px}
   .logo{font-size:1.0625rem}
   .nav .btn-sm{padding:10px 16px;min-height:42px;font-size:.875rem}
   .hide-sm{display:none}
   .nav-actions{gap:6px}
+  /* 주요 기능 이동은 하단 탭바가 맡으므로 헤더는 로고 + 로그인 상태만 남긴다 */
+  .nav-actions>a.btn{display:none}
 }
+
+/* ---------- Auth widget (auth-widget.js가 .auth-slot에 렌더링) ---------- */
+.auth-slot{display:flex;align-items:center;flex:none}
+.auth-slot__user{display:flex;align-items:center;gap:8px;font-size:.9375rem;font-weight:600;color:var(--ink)}
+.auth-slot__name{white-space:nowrap}
+.auth-slot__logout-btn{font-weight:700;color:var(--ink-2);padding:4px 2px;transition:color .16s ease}
+.auth-slot__logout-btn:hover{color:var(--coral)}
+@media(max-width:560px){.auth-slot__user{font-size:.8125rem;gap:6px}}
+
+/* ---------- 모바일 하단 탭바 (tabbar.js가 렌더링, index/save/mypage 공통) ---------- */
+.tabbar{display:none}
+@media(max-width:560px){
+  body{padding-bottom:calc(60px + env(safe-area-inset-bottom))}
+  .tabbar{
+    display:grid;grid-template-columns:repeat(5,1fr);
+    position:fixed;left:0;right:0;bottom:0;z-index:60;
+    background:var(--white);border-top:1px solid var(--border-soft);
+    box-shadow:0 -2px 12px rgba(0,0,0,.06);
+    padding:6px 2px calc(6px + env(safe-area-inset-bottom));
+  }
+  .tabbar__item{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    min-height:44px;padding:4px 2px;color:var(--ink-3);
+  }
+  .tabbar__label{font-size:9.5px;font-weight:700;white-space:nowrap}
+  .tabbar__item--active{color:var(--coral)}
+}
+
+.auth-modal-overlay{
+  position:fixed;inset:0;z-index:200;background:rgba(34,34,34,.45);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.auth-modal-overlay[hidden]{display:none}
+.auth-modal{
+  position:relative;width:100%;max-width:380px;background:var(--white);
+  border-radius:var(--r-lg);box-shadow:var(--shadow-lg);padding:32px 28px 28px;
+}
+.auth-modal__close-btn{position:absolute;top:16px;right:16px;font-size:1.125rem;color:var(--ink-2);line-height:1;padding:6px}
+.auth-modal__close-btn:hover{color:var(--ink)}
+.auth-modal__title{font-size:1.25rem;font-weight:800;letter-spacing:-.02em;margin:0 0 20px}
+.auth-modal__hint{background:var(--bg-soft);color:var(--ink-2);font-size:.875rem;font-weight:600;
+  padding:10px 14px;border-radius:var(--r-sm);margin:-8px 0 20px}
+.auth-modal__hint[hidden]{display:none}
+.auth-modal__form{display:flex;flex-direction:column;gap:6px}
+.auth-modal__label{font-size:.8125rem;font-weight:700;color:var(--ink-2);margin-top:10px}
+.auth-modal__input{
+  font:inherit;font-size:1rem;padding:12px 14px;border:1px solid var(--border);
+  border-radius:var(--r-sm);background:var(--bg-soft);color:var(--ink);outline:none;
+  transition:border-color .16s ease,background .16s ease;
+}
+.auth-modal__input:focus{border-color:var(--ink);background:var(--white)}
+.auth-modal__error{color:var(--coral-dark);font-size:.875rem;font-weight:600;margin:10px 0 0}
+.auth-modal__error[hidden]{display:none}
+.auth-modal__actions{display:flex;gap:8px;margin-top:18px}
+.auth-modal__actions .btn{flex:1;padding-inline:12px}
 
 /* ---------- Hero ---------- */
 .hero{position:relative;padding-top:clamp(48px,8vw,88px);padding-bottom:var(--sec);overflow:hidden}
@@ -103,6 +161,11 @@ header.stuck{border-bottom-color:var(--border-soft)}
 .hero .display{margin-bottom:24px}
 .hero .lead{margin-bottom:36px}
 .hero-cta{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+@media(max-width:560px){
+  .hero-cta{align-items:stretch}
+  .hero-cta .btn{width:100%;min-height:56px}
+  .btn-note{text-align:center}
+}
 
 /* floating cards */
 .stack{display:grid;gap:var(--sp-4)}
@@ -139,12 +202,51 @@ section{position:relative}
 .sec-head{max-width:44rem;margin-bottom:clamp(40px,6vw,64px)}
 .sec-head .lead{margin-top:18px}
 
+/* ---------- 인기 맛집 랭킹 (ranking.js가 #ranking-list에 렌더링) ---------- */
+.rank-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;max-width:640px;margin-inline:auto}
+.rank-item{
+  display:flex;align-items:center;gap:16px;
+  background:var(--white);border:1px solid var(--border-soft);border-radius:var(--r-md);
+  padding:14px 18px;box-shadow:var(--shadow-sm);
+}
+.rank-item__badge{
+  flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
+  background:var(--bg-soft);color:var(--ink-2);font-weight:800;font-size:.9375rem;
+}
+.rank-item:nth-child(1) .rank-item__badge{background:var(--coral);color:#fff}
+.rank-item:nth-child(2) .rank-item__badge{background:var(--tangerine);color:#fff}
+.rank-item:nth-child(3) .rank-item__badge{background:var(--butter);color:var(--ink)}
+.rank-item__name{flex:1;min-width:0;font-weight:700;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank-item__count{flex:none;font-size:.8125rem;font-weight:600;color:var(--ink-2)}
+.rank-empty{text-align:center;color:var(--ink-2);font-size:1rem}
+.rank-loading{text-align:center;color:var(--ink-2);font-size:1rem}
+.rank-loading[hidden]{display:none}
+
+/* ---------- 맞춤 추천 (recommendations.js가 #reco-list에 렌더링) ---------- */
+.reco-list{display:grid;gap:16px;grid-template-columns:1fr;max-width:1040px;margin-inline:auto}
+@media(min-width:640px){.reco-list{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1000px){.reco-list{grid-template-columns:repeat(3,1fr)}}
+.reco-card{
+  background:var(--white);border:1px solid var(--border-soft);border-radius:var(--r-lg);
+  padding:18px;box-shadow:var(--shadow-sm);transition:box-shadow .18s var(--ease),transform .18s var(--ease);
+}
+.reco-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.reco-card__name{font-size:1.0625rem;font-weight:800;letter-spacing:-.02em;margin:0 0 4px}
+.reco-card__category{font-size:.8125rem;font-weight:700;color:var(--ink-2);margin:0 0 4px}
+.reco-card__address{font-size:.875rem;color:var(--ink-2);margin:0}
+.reco-card__link{display:inline-block;margin-top:10px;font-size:.875rem;font-weight:700;color:var(--coral);transition:color .16s ease}
+.reco-card__link:hover{color:var(--coral-dark)}
+
 /* ---------- Onboarding ---------- */
 .quiz{background:var(--white);border-radius:clamp(20px,3.5vw,32px);box-shadow:var(--shadow-md);
   border:1px solid var(--border-soft);padding:clamp(28px,5vw,56px);max-width:820px;margin:0 auto}
 .progress{height:6px;background:var(--bg-soft);border-radius:var(--r-pill);overflow:hidden;margin-bottom:32px}
 .progress-bar{height:100%;background:var(--coral);border-radius:var(--r-pill);width:0;transition:width .35s var(--ease)}
-.qstep{font-size:.8125rem;font-weight:700;letter-spacing:.04em;color:var(--coral);margin:0 0 10px}
+.qtop{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.qstep{font-size:.8125rem;font-weight:700;letter-spacing:.04em;color:var(--coral);margin:0}
+.qback{font-size:.8125rem;font-weight:700;color:var(--ink-2);padding:4px 2px;transition:color .16s ease}
+.qback:hover{color:var(--ink)}
+.qback[hidden]{display:none}
 .qtitle{font-size:clamp(1.4rem,3.2vw,2rem);font-weight:800;letter-spacing:-.025em;line-height:1.25;margin:0 0 28px}
 .chips{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 @media(min-width:600px){.chips{grid-template-columns:repeat(4,1fr)}}

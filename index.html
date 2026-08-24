@@ -25,7 +25,9 @@
     </a>
     <div class="nav-actions">
       <a class="btn btn-ghost btn-sm" href="save.html">맛집 담기</a>
+      <a class="btn btn-ghost btn-sm" href="mypage.html" id="pocket-link" hidden>맛집주머니</a>
       <a class="btn btn-primary btn-sm" href="#quiz"><span class="hide-sm">3초 만에&nbsp;</span>내 취향 찾기</a>
+      <div class="auth-slot" id="auth-slot"></div>
     </div>
   </div>
 </header>
@@ -126,6 +128,31 @@
   </div>
 </div>
 
+<!-- ===== 인기 맛집 랭킹 (모두가 담은 것을 합산, 로그인 여부와 무관하게 노출) ===== -->
+<section class="sec" id="ranking">
+  <div class="wrap">
+    <div class="sec-head rv" style="text-align:center;margin-inline:auto">
+      <p class="label">지금 인기 있는</p>
+      <h2 class="h1">가장 많이 <span class="hl">담긴 맛집</span> TOP 5</h2>
+      <p class="lead" style="margin-inline:auto">사람들이 가장 많이 담은 맛집이에요.</p>
+    </div>
+    <p class="rank-loading" id="ranking-loading">인기 맛집을 불러오는 중...</p>
+    <ol class="rank-list rv" id="ranking-list"></ol>
+    <p class="rank-empty" id="ranking-empty" hidden>아직 담긴 맛집이 없어요.</p>
+  </div>
+</section>
+
+<!-- ===== 맞춤 추천 (로그인 + 담은 가게가 있을 때만 노출) ===== -->
+<section class="sec sec-peach" id="reco-section" hidden>
+  <div class="wrap">
+    <div class="sec-head" style="text-align:center;margin-inline:auto">
+      <p class="label">맞춤 추천</p>
+      <h2 class="h1" id="reco-label">당신을 위한 추천</h2>
+    </div>
+    <div class="reco-list" id="reco-list"></div>
+  </div>
+</section>
+
 <!-- ===== 2. 취향 온보딩 미리보기 ===== -->
 <section class="sec" id="quiz">
   <div class="wrap">
@@ -141,7 +168,10 @@
       </div>
 
       <div id="qArea">
-        <p class="qstep" id="qStep">질문 1 / 4</p>
+        <div class="qtop">
+          <p class="qstep" id="qStep">질문 1 / 4</p>
+          <button type="button" class="qback" id="qBack" hidden>← 이전 질문</button>
+        </div>
         <h3 class="qtitle" id="qTitle">지금 당기는 건 뭔가요?</h3>
         <div class="chips" id="qChips"></div>
       </div>
@@ -381,7 +411,7 @@ let qi = 0, answers = [];
 const qArea=document.getElementById('qArea'), qResult=document.getElementById('qResult'),
       qStep=document.getElementById('qStep'), qTitle=document.getElementById('qTitle'),
       qChips=document.getElementById('qChips'), pb=document.getElementById('pb'),
-      pbWrap=document.getElementById('pbWrap');
+      pbWrap=document.getElementById('pbWrap'), qBack=document.getElementById('qBack');
 
 function render(){
   const Q = QUESTIONS[qi];
@@ -391,12 +421,18 @@ function render(){
   Q.opts.forEach(o=>{
     const b=document.createElement('button');
     b.type='button'; b.className='chip'; b.innerHTML = ICO[o.i] + `<span>${o.t}</span>`;
+    if(answers[qi] === o.k) b.classList.add('on');
     b.addEventListener('click',()=>choose(b,o.k));
     qChips.appendChild(b);
   });
   pb.style.width = (qi/QUESTIONS.length*100)+'%';
   pbWrap.setAttribute('aria-valuenow', qi);
+  qBack.hidden = qi === 0;
 }
+
+qBack.addEventListener('click', () => {
+  if(qi > 0){ qi--; render(); }
+});
 
 function choose(btn, key){
   [...qChips.children].forEach(c=>c.classList.remove('on'));
@@ -453,6 +489,15 @@ document.querySelectorAll('.rv').forEach(el=>io.observe(el));
 /* ---------- 헤더 ---------- */
 const hdr=document.getElementById('hdr');
 addEventListener('scroll',()=>hdr.classList.toggle('stuck', scrollY>8), {passive:true});
+</script>
+<script type="module" src="auth-widget.js"></script>
+<script type="module" src="tabbar.js"></script>
+<script type="module" src="ranking.js"></script>
+<script type="module" src="recommendations.js"></script>
+<script type="module">
+  import { onAuthChange } from "./auth.js";
+  const pocketLink = document.getElementById("pocket-link");
+  onAuthChange((user) => { pocketLink.hidden = !user; });
 </script>
 </body>
 </html>

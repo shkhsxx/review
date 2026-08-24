@@ -1,0 +1,64 @@
+/* ============================================================
+   오늘뭐먹지 — mypage.css
+   맛집주머니 페이지 (mypage.html) 전용 스타일
+   Design tokens: style.css의 :root 변수를 그대로 사용합니다.
+   이 파일을 쓰는 페이지는 style.css를 먼저 링크해야 합니다.
+   <link rel="stylesheet" href="style.css">
+   <link rel="stylesheet" href="mypage.css">
+   ============================================================ */
+
+.mypage-page{background:var(--bg);min-height:100vh;padding-inline:clamp(20px,5vw,48px)}
+
+.mypage-header{padding-block:clamp(28px,5vw,48px) clamp(20px,3vw,32px)}
+.mypage-header__top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.mypage-header__back{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:.9375rem;font-weight:700;color:var(--ink-2);
+  transition:color .16s ease;
+}
+.mypage-header__back:hover{color:var(--coral)}
+.mypage-header__title{font-size:clamp(1.6rem,3.6vw,2.25rem);font-weight:800;letter-spacing:-.03em;margin:0 0 8px}
+.mypage-header__subtitle{color:var(--ink-2);font-size:1rem;margin:0}
+
+/* ---------- 맛집주머니 카드 그리드 ---------- */
+.pocket{padding-bottom:clamp(48px,8vw,88px)}
+.pocket__list{display:grid;gap:16px;grid-template-columns:1fr}
+@media(min-width:640px){.pocket__list{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1000px){.pocket__list{grid-template-columns:repeat(3,1fr)}}
+
+.pocket-card{
+  position:relative;display:flex;flex-direction:column;gap:4px;
+  background:var(--white);border:1px solid var(--border-soft);border-radius:var(--r-lg);
+  padding:18px;box-shadow:var(--shadow-sm);
+  transition:box-shadow .18s var(--ease),transform .18s var(--ease);
+}
+.pocket-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+
+.pocket-card__category{
+  display:inline-flex;width:fit-content;font-size:.75rem;font-weight:700;
+  padding:4px 10px;border-radius:var(--r-pill);background:var(--bg-soft);
+  color:var(--ink-2);margin-bottom:4px;
+}
+.pocket-card__name{font-size:1.0625rem;font-weight:800;letter-spacing:-.02em;margin:0 0 2px;padding-right:28px}
+.pocket-card__address{font-size:.875rem;color:var(--ink-2);margin:0}
+.pocket-card__date{font-size:.8125rem;color:var(--ink-3);margin:2px 0 4px}
+.pocket-card__map-link{
+  align-self:flex-start;margin-top:10px;font-size:.875rem;font-weight:700;color:var(--coral);
+  display:inline-flex;align-items:center;gap:4px;transition:color .16s ease;
+}
+.pocket-card__map-link:hover{color:var(--coral-dark)}
+
+.pocket-card__remove-btn{
+  position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:50%;
+  display:grid;place-items:center;color:var(--ink-3);font-size:.9375rem;font-weight:700;
+  transition:background .16s ease,color .16s ease;
+}
+.pocket-card__remove-btn:hover{background:var(--coral-soft);color:var(--coral)}
+.pocket-card__remove-btn:disabled{opacity:.5;cursor:default}
+
+/* ---------- 빈 상태 ---------- */
+.pocket__empty{
+  text-align:center;padding:clamp(56px,10vw,96px) 20px;
+  background:var(--bg-soft);border-radius:clamp(20px,3vw,32px);
+}
+.pocket__empty-text{color:var(--ink-2);font-size:1.0625rem;margin:0 0 24px}

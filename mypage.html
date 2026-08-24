@@ -1,0 +1,65 @@
+<!--
+  mypage.html — "맛집주머니" 페이지 (로그인한 사용자가 담은 맛집 모아보기)
+
+  구조
+  ─────────────────────────────────────────────
+  .mypage-page
+  ├─ .mypage-header
+  │  ├─ .mypage-header__top      (뒤로가기 링크 + 로그인 위젯)
+  │  │  ├─ .mypage-header__back
+  │  │  └─ .auth-slot            (auth-widget.js가 렌더링)
+  │  ├─ .mypage-header__title
+  │  └─ .mypage-header__subtitle
+  │
+  └─ .pocket
+     ├─ .pocket__list            (mypage.js가 .pocket-card를 채워 넣음)
+     │  └─ .pocket-card
+     │     ├─ .pocket-card__name
+     │     ├─ .pocket-card__category
+     │     ├─ .pocket-card__address
+     │     ├─ .pocket-card__date
+     │     ├─ .pocket-card__map-link   (좌표가 있을 때만 렌더링)
+     │     └─ .pocket-card__remove-btn (X, 삭제)
+     └─ .pocket__empty            (담은 게 없거나 비로그인일 때만 표시. mypage.js가 문구/버튼을 교체)
+        ├─ .pocket__empty-text
+        └─ .pocket__empty-action
+  ─────────────────────────────────────────────
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>맛집주머니 | 오늘뭐먹지</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="mypage.css" />
+</head>
+<body>
+<div class="mypage-page">
+  <header class="mypage-header">
+    <div class="mypage-header__top">
+      <a class="mypage-header__back" href="index.html">← 홈으로</a>
+      <div class="auth-slot" id="auth-slot"></div>
+    </div>
+    <h1 class="mypage-header__title">맛집주머니</h1>
+    <p class="mypage-header__subtitle">내가 담은 맛집을 한곳에 모아봤어요.</p>
+  </header>
+
+  <section class="pocket" aria-label="담은 맛집 목록">
+    <div class="pocket__list" id="pocket-list">
+      <!-- mypage.js가 .pocket-card를 여기에 렌더링합니다 -->
+    </div>
+    <div class="pocket__empty" id="pocket-empty" hidden>
+      <p class="pocket__empty-text" id="pocket-empty-text"></p>
+      <a class="btn btn-primary" id="pocket-empty-action" href="save.html">맛집 검색하러 가기</a>
+    </div>
+  </section>
+</div>
+
+<script type="module" src="auth-widget.js"></script>
+<script type="module" src="tabbar.js"></script>
+<script type="module" src="mypage.js"></script>
+</body>
+</html>
