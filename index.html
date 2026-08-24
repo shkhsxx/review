@@ -136,9 +136,11 @@
       <h2 class="h1">가장 많이 <span class="hl">담긴 맛집</span> TOP 5</h2>
       <p class="lead" style="margin-inline:auto">사람들이 가장 많이 담은 맛집이에요.</p>
     </div>
-    <p class="rank-loading" id="ranking-loading">인기 맛집을 불러오는 중...</p>
-    <ol class="rank-list rv" id="ranking-list"></ol>
-    <p class="rank-empty" id="ranking-empty" hidden>아직 담긴 맛집이 없어요.</p>
+    <div aria-live="polite">
+      <p class="rank-loading" id="ranking-loading">인기 맛집을 불러오는 중…</p>
+      <ol class="rank-list rv" id="ranking-list"></ol>
+      <p class="rank-empty" id="ranking-empty" hidden>아직 담긴 맛집이 없어요.</p>
+    </div>
   </div>
 </section>
 
@@ -167,7 +169,7 @@
         <div class="progress-bar" id="pb"></div>
       </div>
 
-      <div id="qArea">
+      <div id="qArea" aria-live="polite">
         <div class="qtop">
           <p class="qstep" id="qStep">질문 1 / 4</p>
           <button type="button" class="qback" id="qBack" hidden>← 이전 질문</button>

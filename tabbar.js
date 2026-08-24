@@ -60,6 +60,7 @@ function buildTabbar() {
 
     const icon = document.createElement("span");
     icon.className = "tabbar__icon";
+    icon.setAttribute("aria-hidden", "true");
     icon.innerHTML = tab.icon;
     link.appendChild(icon);
 
