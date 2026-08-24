@@ -12,6 +12,9 @@
  *   (구글 Places API (New) 프록시)를 호출해 .review-panel에 별점/리뷰를 보여준다.
  *   같은 가게를 다시 클릭하면 재요청 없이 sessionStorage 캐시를 바로 보여준다
  *   (새로고침해도 유지되고, 탭을 닫으면 사라진다).
+ * - 리뷰가 1건 이상 렌더링되면 곧바로 server.py의 /api/analyze-reviews(Gemini 프록시)를
+ *   호출해 감성분석(긍정/보통/부정 비율, 핵심 키워드, 한줄 요약)을 .review-panel__analysis에
+ *   보여준다. 분석 결과도 sessionStorage에 캐시해 같은 가게 재클릭 시 재요청하지 않는다.
  *
  * ※ HTML class 구조는 save.html 상단 주석을 참고 (design 팀원과 공유된 구조).
  */
@@ -47,10 +50,25 @@ const reviewPanelNotFound = document.getElementById("review-panel-not-found");
 const reviewPanelList = document.getElementById("review-panel-list");
 const reviewPanelMapLink = document.getElementById("review-panel-map-link");
 
+const reviewPanelAnalysis = document.getElementById("review-panel-analysis");
+const analysisLoading = document.getElementById("review-panel-analysis-loading");
+const analysisError = document.getElementById("review-panel-analysis-error");
+const analysisContent = document.getElementById("review-panel-analysis-content");
+const sentimentBarPositive = document.getElementById("sentiment-bar-positive");
+const sentimentBarNeutral = document.getElementById("sentiment-bar-neutral");
+const sentimentBarNegative = document.getElementById("sentiment-bar-negative");
+const sentimentCountPositive = document.getElementById("sentiment-count-positive");
+const sentimentCountNeutral = document.getElementById("sentiment-count-neutral");
+const sentimentCountNegative = document.getElementById("sentiment-count-negative");
+const wordCloud = document.getElementById("word-cloud");
+const analysisSummary = document.getElementById("analysis-summary");
+
 // 한 번 조회한 가게의 리뷰 결과를 sessionStorage에 기억해뒀다가 같은 가게를 다시 클릭하면
 // 재요청하지 않는다. 새로고침해도 유지되고, 탭을 닫으면(세션 종료) 사라진다.
 // key: place.id(없으면 이름+주소로 대체), value: /api/place-reviews 응답 그대로.
 const REVIEW_CACHE_PREFIX = "todaywhattoeat_review_cache:";
+// 같은 key로 /api/analyze-reviews 결과(감성분석)도 별도 prefix로 캐시한다.
+const ANALYSIS_CACHE_PREFIX = "todaywhattoeat_analysis_cache:";
 
 function getCachedReview(cacheKey) {
   try {
@@ -67,6 +85,24 @@ function setCachedReview(cacheKey, result) {
     window.sessionStorage.setItem(REVIEW_CACHE_PREFIX + cacheKey, JSON.stringify(result));
   } catch (err) {
     console.error("[save.js] 리뷰 캐시를 저장하지 못했습니다:", err);
+  }
+}
+
+function getCachedAnalysis(cacheKey) {
+  try {
+    const raw = window.sessionStorage.getItem(ANALYSIS_CACHE_PREFIX + cacheKey);
+    return raw ? JSON.parse(raw) : undefined;
+  } catch (err) {
+    console.error("[save.js] 분석 캐시를 읽지 못했습니다:", err);
+    return undefined;
+  }
+}
+
+function setCachedAnalysis(cacheKey, result) {
+  try {
+    window.sessionStorage.setItem(ANALYSIS_CACHE_PREFIX + cacheKey, JSON.stringify(result));
+  } catch (err) {
+    console.error("[save.js] 분석 캐시를 저장하지 못했습니다:", err);
   }
 }
 
@@ -297,6 +333,126 @@ async function fetchPlaceReviews(place) {
   return data; // { found: true, place: {...} } 또는 { found: false }
 }
 
+/** server.py의 /api/analyze-reviews(Gemini 프록시)를 호출해 감성분석 결과를 가져온다. */
+async function fetchReviewAnalysis(placeName, reviews) {
+  const res = await fetch(`${API_BASE_URL}/api/analyze-reviews`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      placeName,
+      reviews: reviews.map((r) => ({
+        author: r.author,
+        rating: r.rating,
+        date: r.date,
+        content: r.content,
+      })),
+    }),
+  });
+  const data = await res.json();
+
+  if (!res.ok) {
+    const message =
+      (data && data.error && (data.error.message || data.error)) ||
+      "리뷰 분석 중 오류가 발생했습니다.";
+    throw new Error(typeof message === "string" ? message : JSON.stringify(message));
+  }
+
+  return data.result; // { sentiment: {positive,neutral,negative}, keywords: [...], summary }
+}
+
+/** 중요도 점수(1~10)를 워드클라우드 폰트 크기(rem)로 변환한다. */
+function scoreToFontSize(score) {
+  const clamped = Math.min(10, Math.max(1, typeof score === "number" ? score : 5));
+  return 0.85 + ((clamped - 1) / 9) * (2.1 - 0.85);
+}
+
+/** 핵심 단어 한 건을 .word-cloud__item DOM으로 변환 */
+function createWordCloudItem(keyword) {
+  const item = document.createElement("span");
+  const isNegative = keyword.sentiment === "negative";
+  item.className = `word-cloud__item word-cloud__item--${isNegative ? "negative" : "positive"}`;
+  item.style.fontSize = `${scoreToFontSize(keyword.score)}rem`;
+  item.textContent = keyword.word || "";
+  return item;
+}
+
+/** /api/analyze-reviews 응답(result)을 .review-panel__analysis-content에 렌더링한다. */
+function renderAnalysis(result) {
+  analysisContent.hidden = false;
+
+  const sentiment = (result && result.sentiment) || {};
+  const positive = sentiment.positive || 0;
+  const neutral = sentiment.neutral || 0;
+  const negative = sentiment.negative || 0;
+  const total = positive + neutral + negative;
+
+  sentimentBarPositive.style.flexBasis = total ? `${(positive / total) * 100}%` : "0%";
+  sentimentBarNeutral.style.flexBasis = total ? `${(neutral / total) * 100}%` : "0%";
+  sentimentBarNegative.style.flexBasis = total ? `${(negative / total) * 100}%` : "0%";
+
+  sentimentCountPositive.textContent = positive;
+  sentimentCountNeutral.textContent = neutral;
+  sentimentCountNegative.textContent = negative;
+
+  wordCloud.innerHTML = "";
+  const fragment = document.createDocumentFragment();
+  ((result && result.keywords) || []).forEach((keyword) =>
+    fragment.appendChild(createWordCloudItem(keyword))
+  );
+  wordCloud.appendChild(fragment);
+
+  analysisSummary.textContent = (result && result.summary) || "";
+}
+
+/** 분석 영역을 초기 숨김 상태로 되돌린다(패널을 새로 열 때마다 호출). */
+function resetAnalysisPanel() {
+  reviewPanelAnalysis.hidden = true;
+  analysisLoading.hidden = true;
+  analysisError.hidden = true;
+  analysisContent.hidden = true;
+  wordCloud.innerHTML = "";
+  analysisSummary.textContent = "";
+}
+
+/**
+ * 리뷰 렌더링이 끝난 뒤 자동으로 호출된다. 리뷰가 없는 가게는 분석하지 않고
+ * .review-panel__analysis를 숨긴 채로 둔다. 캐시가 있으면 재요청 없이 바로 보여준다.
+ */
+async function maybeStartAnalysis(place, cacheKey, reviewResult) {
+  const reviews = reviewResult && reviewResult.found ? reviewResult.place.reviews || [] : [];
+  if (!reviews.length) {
+    reviewPanelAnalysis.hidden = true;
+    return;
+  }
+
+  reviewPanelAnalysis.hidden = false;
+  analysisError.hidden = true;
+  analysisContent.hidden = true;
+
+  const cachedAnalysis = getCachedAnalysis(cacheKey);
+  if (cachedAnalysis !== undefined) {
+    analysisLoading.hidden = true;
+    renderAnalysis(cachedAnalysis);
+    return;
+  }
+
+  analysisLoading.hidden = false;
+
+  try {
+    const placeName = reviewResult.place.name || place.place_name || "";
+    const analysisResult = await fetchReviewAnalysis(placeName, reviews);
+    setCachedAnalysis(cacheKey, analysisResult);
+    analysisLoading.hidden = true;
+    renderAnalysis(analysisResult);
+  } catch (err) {
+    console.error("[save.js] 리뷰 분석 실패:", err);
+    analysisLoading.hidden = true;
+    analysisContent.hidden = true;
+    analysisError.textContent = err.message || "리뷰 분석에 실패했습니다.";
+    analysisError.hidden = false;
+  }
+}
+
 /** 리뷰 한 건을 .review-item DOM으로 변환 */
 function createReviewItem(review) {
   const item = document.createElement("article");
@@ -361,7 +517,8 @@ function renderReviewPanel(place, result) {
   }
 }
 
-/** 카드 클릭 시 리뷰 패널을 열고, 캐시에 없으면 서버에서 가져와 렌더링한다. */
+/** 카드 클릭 시 리뷰 패널을 열고, 캐시에 없으면 서버에서 가져와 렌더링한다.
+ *  리뷰 렌더링이 끝나면 이어서 AI 감성분석(maybeStartAnalysis)을 자동으로 시작한다. */
 async function openReviewPanel(place) {
   reviewPanel.hidden = false;
   reviewPanelNotFound.hidden = true;
@@ -369,6 +526,7 @@ async function openReviewPanel(place) {
   reviewPanelMapLink.hidden = true;
   reviewPanelName.textContent = place.place_name || "";
   reviewPanelRating.textContent = "";
+  resetAnalysisPanel();
 
   const cacheKey = getReviewCacheKey(place);
   const cached = getCachedReview(cacheKey);
@@ -376,6 +534,7 @@ async function openReviewPanel(place) {
   if (cached !== undefined) {
     reviewPanelLoading.hidden = true;
     renderReviewPanel(place, cached);
+    maybeStartAnalysis(place, cacheKey, cached);
     return;
   }
 
@@ -385,6 +544,7 @@ async function openReviewPanel(place) {
     const result = await fetchPlaceReviews(place);
     setCachedReview(cacheKey, result);
     renderReviewPanel(place, result);
+    maybeStartAnalysis(place, cacheKey, result);
   } catch (err) {
     console.error("[save.js] 리뷰 조회 실패:", err);
     reviewPanelLoading.hidden = true;
@@ -392,6 +552,7 @@ async function openReviewPanel(place) {
     reviewPanelMapLink.hidden = true;
     reviewPanelNotFound.textContent = err.message || "리뷰를 불러오지 못했습니다.";
     reviewPanelNotFound.hidden = false;
+    reviewPanelAnalysis.hidden = true;
   }
 }
 

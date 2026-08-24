@@ -16,10 +16,13 @@ New Places API)를 프론트엔드(save.js)에서 바로 호출하지 못하도�
                               키라면 Cloud 콘솔에서 "Places API (New)"도 추가로
                               사용 설정(enable)해야 한다. 그렇지 않으면 구글이
                               403 PERMISSION_DENIED를 반환한다.
+    GEMINI_API_KEY          Google AI Studio에서 발급받은 Gemini API 키 (필수, /api/analyze-reviews용)
+    GEMINI_MODEL            사용할 Gemini 모델명 (기본값: gemini-2.0-flash).
+                             ai.google.dev에서 최신 추천 모델을 확인해 필요하면 바꾼다.
     PORT                    서버 포트 (기본 8000)
 
 실행:
-    KAKAO_REST_API_KEY=xxxx GOOGLE_PLACES_API_KEY=yyyy python3 server.py
+    KAKAO_REST_API_KEY=xxxx GOOGLE_PLACES_API_KEY=yyyy GEMINI_API_KEY=zzzz python3 server.py
 
 프론트엔드에서 호출하는 엔드포인트:
     GET /api/search?query=<검색어>&category_group_code=<코드>&x=<lng>&y=<lat>&radius=<m>&page=<n>
@@ -44,8 +47,16 @@ New Places API)를 프론트엔드(save.js)에서 바로 호출하지 못하도�
     - 찾으면 Place Details (New)를 한 번 더 호출해 이름/별점/리뷰개수/리뷰/구글맵 링크
       5개 정보만 정리해 {"found": true, "place": {...}} 형태로 반환한다.
 
-응답은 각 API(카카오/구글)의 JSON을 그대로 반환한다(단, /api/place-reviews는 두 단계
-호출 결과를 조합해 위 형태로 정리한 JSON을 반환한다).
+    POST /api/analyze-reviews
+    body: {"placeName": "가게이름", "reviews": [{"author","rating","date","content"}, ...]}
+
+    - Gemini API로 리뷰를 감성분석한다: 긍정/보통/부정 분류+개수, 핵심 키워드(8~15개,
+      중요도 1~10 + 긍정/부정 맥락), 한 문장 요약.
+    - 응답: {"analyzed": true, "result": {"sentiment": {...}, "keywords": [...], "summary": "..."}}
+    - reviews가 비어있으면 400을 반환한다(리뷰 없는 가게는 프론트에서 애초에 호출하지 않는다).
+
+응답은 각 API(카카오/구글/Gemini)의 JSON을 그대로 반환한다(단, /api/place-reviews와
+/api/analyze-reviews는 여러 단계 호출 결과를 조합해 위 형태로 정리한 JSON을 반환한다).
 """
 
 import json
@@ -86,6 +97,41 @@ MATCH_RADIUS_METERS = 150  # 도보 2분 반경 — 이 거리를 넘는 동명 
 PLACE_SEARCH_FIELD_MASK = "places.id,places.displayName,places.location"
 # 상세 단계: 화면에 보여줄 5개 정보(이름/별점/리뷰개수/리뷰/지도링크)만 요청
 PLACE_DETAILS_FIELD_MASK = "displayName,rating,userRatingCount,reviews,googleMapsUri"
+
+# Gemini API (리뷰 감성분석) — 모델명은 환경변수로 오버라이드 가능
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+
+# Gemini structured output(responseSchema)에 강제할 JSON 스키마.
+# 세 가지 분석 결과(감성 분류+개수 / 핵심 키워드 / 한줄 요약)를 한 번의 호출로 받는다.
+ANALYSIS_RESPONSE_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "sentiment": {
+            "type": "OBJECT",
+            "properties": {
+                "positive": {"type": "INTEGER"},
+                "neutral": {"type": "INTEGER"},
+                "negative": {"type": "INTEGER"},
+            },
+            "required": ["positive", "neutral", "negative"],
+        },
+        "keywords": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "word": {"type": "STRING"},
+                    "score": {"type": "INTEGER"},
+                    "sentiment": {"type": "STRING", "enum": ["positive", "negative"]},
+                },
+                "required": ["word", "score", "sentiment"],
+            },
+        },
+        "summary": {"type": "STRING"},
+    },
+    "required": ["sentiment", "keywords", "summary"],
+}
 
 
 class ApiError(Exception):
@@ -320,6 +366,119 @@ def get_place_reviews(query_params):
     return 200, {"found": True, "place": _normalize_place_details(details, name)}
 
 
+def _get_gemini_api_key():
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        raise ApiError(500, "서버에 GEMINI_API_KEY 환경변수가 설정되어 있지 않습니다.")
+    return key
+
+
+def _build_analysis_prompt(place_name, reviews):
+    review_lines = "\n".join(
+        f"{i + 1}. (별점 {r.get('rating', '?')}) {r.get('content') or '(내용 없음)'}"
+        for i, r in enumerate(reviews)
+    )
+    return f"""너는 음식점 리뷰 분석가야. 아래는 '{place_name}'에 대한 구글 리뷰 {len(reviews)}건이다.
+
+{review_lines}
+
+위 리뷰들을 분석해서 다음 세 가지를 수행하고, 반드시 지정된 JSON 스키마 형식으로만 답해라.
+1. 각 리뷰를 긍정/보통/부정 중 하나로 분류하고 각각 몇 건인지 센다 (positive/neutral/negative, 합은 {len(reviews)}이어야 한다).
+2. 리뷰에 자주 등장하는 핵심 단어를 8~15개 뽑는다. 음식 이름, 맛, 분위기, 서비스 관련 단어 위주로 고른다.
+   각 단어마다 중요도(score, 1~10)와 그 단어가 쓰인 맥락이 긍정인지 부정인지(sentiment)를 표기한다.
+3. 이 가게 리뷰 전체를 자연스러운 한국어 한 문장으로 요약한다(summary).
+
+한국어로 답하라."""
+
+
+def _clamp_score(score):
+    try:
+        n = round(float(score))
+    except (TypeError, ValueError):
+        return 5
+    return min(10, max(1, n))
+
+
+def _normalize_analysis(raw):
+    sentiment = raw.get("sentiment") or {}
+    keywords = raw.get("keywords") if isinstance(raw.get("keywords"), list) else []
+    normalized_keywords = []
+    for k in keywords:
+        if not isinstance(k, dict) or not str(k.get("word") or "").strip():
+            continue
+        normalized_keywords.append(
+            {
+                "word": str(k["word"]).strip(),
+                "score": _clamp_score(k.get("score")),
+                "sentiment": "negative" if k.get("sentiment") == "negative" else "positive",
+            }
+        )
+
+    def _count(value):
+        try:
+            return max(0, round(float(value)))
+        except (TypeError, ValueError):
+            return 0
+
+    return {
+        "sentiment": {
+            "positive": _count(sentiment.get("positive")),
+            "neutral": _count(sentiment.get("neutral")),
+            "negative": _count(sentiment.get("negative")),
+        },
+        "keywords": normalized_keywords[:15],
+        "summary": str(raw.get("summary") or "").strip(),
+    }
+
+
+def analyze_reviews(payload):
+    """가게 이름 + 리뷰 목록으로 Gemini에게 감성분석(분류/키워드/요약)을 요청한다."""
+    place_name = str(payload.get("placeName") or "").strip()
+    reviews = [
+        r for r in (payload.get("reviews") or []) if isinstance(r, dict) and r.get("content")
+    ]
+    if not place_name or not reviews:
+        raise ApiError(400, "placeName, reviews가 필요합니다.")
+
+    api_key = _get_gemini_api_key()
+    body = {
+        "contents": [{"role": "user", "parts": [{"text": _build_analysis_prompt(place_name, reviews)}]}],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "responseSchema": ANALYSIS_RESPONSE_SCHEMA,
+        },
+    }
+    url = f"{GEMINI_URL_TEMPLATE.format(model=GEMINI_MODEL)}?key={api_key}"
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20, context=_SSL_CONTEXT) as res:
+            data = json.loads(res.read())
+    except urllib.error.HTTPError as e:
+        body_bytes = e.read()
+        try:
+            parsed = json.loads(body_bytes)
+        except json.JSONDecodeError:
+            parsed = {}
+        error_obj = parsed.get("error")
+        message = error_obj.get("message") if isinstance(error_obj, dict) else error_obj
+        raise ApiError(502, f"Gemini API 호출 실패: {message or e.reason}")
+    except urllib.error.URLError as e:
+        raise ApiError(502, f"Gemini API 호출 실패: {e.reason}")
+
+    try:
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
+        parsed_result = json.loads(text)
+    except (KeyError, IndexError, json.JSONDecodeError):
+        raise ApiError(502, "Gemini 응답에서 분석 결과를 찾지 못했습니다.")
+
+    return 200, {"analyzed": True, "result": _normalize_analysis(parsed_result)}
+
+
 class Handler(BaseHTTPRequestHandler):
     def _send_json(self, status, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -333,9 +492,29 @@ class Handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
+
+    def do_POST(self):
+        parsed = urllib.parse.urlparse(self.path)
+
+        if parsed.path == "/api/analyze-reviews":
+            length = int(self.headers.get("Content-Length") or 0)
+            raw_body = self.rfile.read(length) if length else b"{}"
+            try:
+                payload = json.loads(raw_body or b"{}")
+            except json.JSONDecodeError:
+                self._send_json(400, {"error": "잘못된 요청 본문입니다."})
+                return
+            try:
+                status, data = analyze_reviews(payload)
+                self._send_json(status, data)
+            except ApiError as e:
+                self._send_json(e.status, {"error": e.message})
+            return
+
+        self._send_json(404, {"error": "not found"})
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -391,10 +570,13 @@ def main():
     print("엔드포인트: GET /api/search?query=<검색어>&category_group_code=<코드>")
     print("엔드포인트: GET /api/places-google?query=<검색어>")
     print("엔드포인트: GET /api/place-reviews?name=<가게이름>&x=<경도>&y=<위도>")
+    print("엔드포인트: POST /api/analyze-reviews (body: {placeName, reviews})")
     if not os.environ.get("KAKAO_REST_API_KEY"):
         print("경고: KAKAO_REST_API_KEY 환경변수가 설정되어 있지 않습니다.")
     if not os.environ.get("GOOGLE_PLACES_API_KEY"):
         print("경고: GOOGLE_PLACES_API_KEY 환경변수가 설정되어 있지 않습니다.")
+    if not os.environ.get("GEMINI_API_KEY"):
+        print("경고: GEMINI_API_KEY 환경변수가 설정되어 있지 않습니다.")
     server.serve_forever()
 
 

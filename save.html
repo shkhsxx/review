@@ -53,7 +53,21 @@
   │  │     ├─ .review-item__rating    별점 (예: "★ 5")
   │  │     ├─ .review-item__date      작성 시점 (구글이 내려주는 상대 시간 문자열, 예: "2개월 전")
   │  │     └─ .review-item__content   리뷰 내용
-  │  └─ .review-panel__map-link     (a 태그, 구글 지도에서 전체 리뷰 보기 — 결과 없으면 숨김)
+  │  ├─ .review-panel__map-link     (a 태그, 구글 지도에서 전체 리뷰 보기 — 결과 없으면 숨김)
+  │  └─ .review-panel__analysis     AI 감성분석 영역 (리뷰가 1건 이상일 때만 표시, 리뷰가 다 뜨면 자동 시작)
+  │     ├─ .review-panel__analysis-loading   "리뷰를 분석하고 있어요..." 로딩 문구 (JS가 토글)
+  │     ├─ .review-panel__analysis-error     분석 실패 안내 문구 (JS가 토글 + 텍스트 교체)
+  │     └─ .review-panel__analysis-content   분석 결과 (JS가 토글)
+  │        ├─ .sentiment-bar          긍정/보통/부정 비율 막대(초록/노랑/빨강, 개수 비례 너비)
+  │        │  ├─ .sentiment-bar__segment--positive
+  │        │  ├─ .sentiment-bar__segment--neutral
+  │        │  └─ .sentiment-bar__segment--negative
+  │        ├─ .sentiment-legend       막대 아래 범례("긍정 3", "보통 1", "부정 1" 형태)
+  │        ├─ .word-cloud             핵심 단어 워드클라우드 컨테이너
+  │        │  └─ .word-cloud__item    단어 1개(JS가 동적 생성). score(1~10)에 비례해 font-size를
+  │        │                          inline style로 지정하고, sentiment에 따라
+  │        │                          .word-cloud__item--positive(초록)/--negative(빨강) 클래스를 붙인다.
+  │        └─ .analysis-summary       AI 총평 한 줄 (말풍선 스타일)
   │
   └─ .saved-list                   담은 목록 영역
      ├─ .saved-list__title
@@ -78,6 +92,12 @@
   - 좌표 기준 150m(도보 2분) 밖에서 찾은 동명(同名) 결과는 무시하고, 아예 못 찾으면
     .review-panel__not-found 문구만 보여주고 .review-panel__list/.review-panel__map-link는
     비워/숨김 처리합니다.
+
+  .review-panel__analysis 관련 참고:
+  - 리뷰가 1건 이상 있는 가게만 대상으로, 리뷰 렌더링이 끝나면 자동으로
+    /api/analyze-reviews (Gemini API 프록시)를 호출해 감성분석 결과를 보여줍니다.
+    리뷰가 0건이거나 가게를 못 찾은 경우 .review-panel__analysis 자체가 hidden 처리됩니다.
+  - 분석 결과도 sessionStorage에 캐시되어 같은 가게를 다시 클릭하면 재요청하지 않습니다.
 -->
 <!DOCTYPE html>
 <html lang="ko">
@@ -143,6 +163,35 @@
       hidden
       >구글 지도에서 전체 리뷰 보기</a
     >
+
+    <div class="review-panel__analysis" id="review-panel-analysis" hidden>
+      <p class="review-panel__analysis-loading" id="review-panel-analysis-loading" hidden>
+        리뷰를 분석하고 있어요...
+      </p>
+      <p class="review-panel__analysis-error" id="review-panel-analysis-error" hidden></p>
+      <div class="review-panel__analysis-content" id="review-panel-analysis-content" hidden>
+        <div class="sentiment-bar" id="sentiment-bar">
+          <div class="sentiment-bar__segment sentiment-bar__segment--positive" id="sentiment-bar-positive"></div>
+          <div class="sentiment-bar__segment sentiment-bar__segment--neutral" id="sentiment-bar-neutral"></div>
+          <div class="sentiment-bar__segment sentiment-bar__segment--negative" id="sentiment-bar-negative"></div>
+        </div>
+        <ul class="sentiment-legend" id="sentiment-legend">
+          <li class="sentiment-legend__item sentiment-legend__item--positive">
+            긍정 <span id="sentiment-count-positive"></span>
+          </li>
+          <li class="sentiment-legend__item sentiment-legend__item--neutral">
+            보통 <span id="sentiment-count-neutral"></span>
+          </li>
+          <li class="sentiment-legend__item sentiment-legend__item--negative">
+            부정 <span id="sentiment-count-negative"></span>
+          </li>
+        </ul>
+        <div class="word-cloud" id="word-cloud">
+          <!-- save.js가 분석된 핵심 단어를 기반으로 .word-cloud__item 을 여기에 렌더링합니다 -->
+        </div>
+        <p class="analysis-summary" id="analysis-summary"></p>
+      </div>
+    </div>
   </section>
 
   <section class="saved-list" aria-label="담은 맛집 목록">

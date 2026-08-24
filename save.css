@@ -181,6 +181,67 @@
 }
 .review-panel__map-link:hover{text-decoration:underline}
 
+/* ---------- AI 감성분석 (v0.5) ----------
+   .review-panel 안, .review-panel__map-link 다음에 오는 별도 블록. 리뷰 렌더링이
+   끝나면 save.js가 자동으로 /api/analyze-reviews를 호출해 이 영역을 채운다.
+   위쪽에 얇은 구분선을 둬서 "리뷰 원문"과 "AI 분석"을 시각적으로 나눈다. */
+.review-panel__analysis{
+  display:flex;flex-direction:column;gap:var(--sp-4);
+  padding-top:var(--sp-4);border-top:1px solid var(--border-soft);
+}
+.review-panel__analysis[hidden]{display:none}
+
+.review-panel__analysis-loading,
+.review-panel__analysis-error{margin:0;text-align:center;padding:clamp(16px,3vw,28px) 16px;color:var(--ink-2);font-size:.9375rem}
+.review-panel__analysis-error{color:var(--coral-dark);font-weight:600}
+
+.review-panel__analysis-content{display:flex;flex-direction:column;gap:var(--sp-4)}
+.review-panel__analysis-content[hidden]{display:none}
+
+/* 긍정/보통/부정 비율 막대 */
+.sentiment-bar{
+  display:flex;width:100%;height:12px;border-radius:var(--r-pill);overflow:hidden;
+  background:var(--bg-soft);
+}
+.sentiment-bar__segment{height:100%;flex:0 0 auto;min-width:0;transition:flex-basis .2s var(--ease)}
+.sentiment-bar__segment--positive{background:var(--basil)}
+.sentiment-bar__segment--neutral{background:var(--butter)}
+.sentiment-bar__segment--negative{background:var(--coral-dark)}
+
+.sentiment-legend{
+  list-style:none;display:flex;flex-wrap:wrap;gap:14px;margin:0;padding:0;
+  font-size:.8125rem;font-weight:700;color:var(--ink-2);
+}
+.sentiment-legend__item{display:inline-flex;align-items:center;gap:6px}
+.sentiment-legend__item::before{content:"";width:9px;height:9px;border-radius:50%;flex:none}
+.sentiment-legend__item--positive::before{background:var(--basil)}
+.sentiment-legend__item--neutral::before{background:var(--butter)}
+.sentiment-legend__item--negative::before{background:var(--coral-dark)}
+
+/* 워드클라우드 — 중요도(score 1~10)에 비례한 font-size는 JS가 inline style로 지정 */
+.word-cloud{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
+  gap:6px 14px;background:var(--bg-soft);border-radius:var(--r-md);
+  padding:clamp(16px,3vw,24px);
+}
+.word-cloud__item{
+  font-weight:800;letter-spacing:-.01em;line-height:1.2;white-space:nowrap;
+}
+.word-cloud__item--positive{color:var(--basil)}
+.word-cloud__item--negative{color:var(--coral-dark)}
+
+/* AI 총평 — 말풍선 */
+.analysis-summary{
+  position:relative;align-self:flex-start;max-width:100%;
+  margin:6px 0 0;padding:14px 18px;background:var(--coral-soft);border-radius:var(--r-md);
+  color:var(--ink);font-size:.9375rem;font-weight:600;line-height:1.6;
+}
+.analysis-summary::before{
+  content:"";position:absolute;top:-7px;left:22px;
+  width:14px;height:14px;background:var(--coral-soft);
+  clip-path:polygon(0 100%,100% 100%,50% 0);
+}
+
 /* ---------- 담은 목록 ---------- */
 .saved-list{background:var(--bg-soft);border-radius:clamp(20px,3vw,32px);padding:clamp(24px,4vw,40px)}
 .saved-list__title{font-size:1.125rem;font-weight:700;letter-spacing:-.02em;margin:0 0 20px}
