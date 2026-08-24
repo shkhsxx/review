@@ -10,7 +10,8 @@
  * - 담은 목록(.saved-item)은 페이지 로드 시 + 변경 시마다 storage.js에서 다시 읽어 렌더링한다.
  * - 카드를 클릭하면(저장 버튼/링크 클릭은 제외) server.py의 /api/place-reviews
  *   (구글 Places API (New) 프록시)를 호출해 .review-panel에 별점/리뷰를 보여준다.
- *   같은 가게를 다시 클릭하면 재요청 없이 메모리 캐시(reviewCache)를 바로 보여준다.
+ *   같은 가게를 다시 클릭하면 재요청 없이 sessionStorage 캐시를 바로 보여준다
+ *   (새로고침해도 유지되고, 탭을 닫으면 사라진다).
  *
  * ※ HTML class 구조는 save.html 상단 주석을 참고 (design 팀원과 공유된 구조).
  */
@@ -46,9 +47,28 @@ const reviewPanelNotFound = document.getElementById("review-panel-not-found");
 const reviewPanelList = document.getElementById("review-panel-list");
 const reviewPanelMapLink = document.getElementById("review-panel-map-link");
 
-// 한 번 조회한 가게의 리뷰 결과를 기억해뒀다가 같은 가게를 다시 클릭하면 재요청하지 않는다.
+// 한 번 조회한 가게의 리뷰 결과를 sessionStorage에 기억해뒀다가 같은 가게를 다시 클릭하면
+// 재요청하지 않는다. 새로고침해도 유지되고, 탭을 닫으면(세션 종료) 사라진다.
 // key: place.id(없으면 이름+주소로 대체), value: /api/place-reviews 응답 그대로.
-const reviewCache = new Map();
+const REVIEW_CACHE_PREFIX = "todaywhattoeat_review_cache:";
+
+function getCachedReview(cacheKey) {
+  try {
+    const raw = window.sessionStorage.getItem(REVIEW_CACHE_PREFIX + cacheKey);
+    return raw ? JSON.parse(raw) : undefined;
+  } catch (err) {
+    console.error("[save.js] 리뷰 캐시를 읽지 못했습니다:", err);
+    return undefined;
+  }
+}
+
+function setCachedReview(cacheKey, result) {
+  try {
+    window.sessionStorage.setItem(REVIEW_CACHE_PREFIX + cacheKey, JSON.stringify(result));
+  } catch (err) {
+    console.error("[save.js] 리뷰 캐시를 저장하지 못했습니다:", err);
+  }
+}
 
 function setStatus(message) {
   searchStatus.textContent = message || "";
@@ -351,10 +371,11 @@ async function openReviewPanel(place) {
   reviewPanelRating.textContent = "";
 
   const cacheKey = getReviewCacheKey(place);
+  const cached = getCachedReview(cacheKey);
 
-  if (reviewCache.has(cacheKey)) {
+  if (cached !== undefined) {
     reviewPanelLoading.hidden = true;
-    renderReviewPanel(place, reviewCache.get(cacheKey));
+    renderReviewPanel(place, cached);
     return;
   }
 
@@ -362,7 +383,7 @@ async function openReviewPanel(place) {
 
   try {
     const result = await fetchPlaceReviews(place);
-    reviewCache.set(cacheKey, result);
+    setCachedReview(cacheKey, result);
     renderReviewPanel(place, result);
   } catch (err) {
     console.error("[save.js] 리뷰 조회 실패:", err);
