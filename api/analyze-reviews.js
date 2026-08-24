@@ -1,13 +1,15 @@
-// netlify/functions/analyze-reviews.js
+// api/analyze-reviews.js
 // Gemini API로 구글 리뷰의 감성분석(긍정/보통/부정 분류+개수, 핵심 키워드, 한줄 요약)을
-// 수행하는 프록시. 로컬 개발용 server.py의 analyze_reviews()와 동일한 역할을 한다.
+// 수행하는 프록시. Vercel Serverless Function — 이 파일이 자동으로
+// POST /api/analyze-reviews 로 매핑된다.
+// (기존 netlify/functions/analyze-reviews.js와 동일한 로직, req/res 포맷만 Vercel에 맞춤)
 //
-// 환경변수 (Netlify 사이트 설정 > Environment variables):
+// 환경변수 (Vercel 프로젝트 설정 > Environment Variables):
 //   GEMINI_API_KEY   Google AI Studio에서 발급받은 Gemini API 키 (필수)
 //   GEMINI_MODEL     사용할 Gemini 모델명 (기본값: gemini-3.6-flash).
 //                     ai.google.dev에서 최신 추천 모델을 확인해 필요하면 바꿔준다.
 //
-// 배포 후 호출 경로: POST /api/analyze-reviews
+// 호출 경로: POST /api/analyze-reviews
 // body: { placeName: string, reviews: [{ author, rating, date, content }, ...] }
 //
 // 무료 사용량을 아끼기 위해 프론트엔드(save.js)가 sessionStorage에 분석 결과를
@@ -22,13 +24,7 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 const geminiUrl = (model) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
-const JSON_HEADERS = {
-  "Content-Type": "application/json; charset=utf-8",
-  "Access-Control-Allow-Origin": "*",
-};
-
 // Gemini structured output(responseSchema)에 강제할 JSON 스키마.
-// 세 가지 분석 결과(감성 분류+개수 / 핵심 키워드 / 한줄 요약)를 한 번의 호출로 받는다.
 const RESPONSE_SCHEMA = {
   type: "OBJECT",
   properties: {
@@ -105,46 +101,39 @@ function normalizeAnalysis(raw) {
   };
 }
 
-exports.handler = async (event) => {
-  if (event.httpMethod === "OPTIONS") {
-    return {
-      statusCode: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
-      body: "",
-    };
+module.exports = async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.status(204).end();
+    return;
   }
 
-  if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ error: "POST만 지원합니다." }),
-    };
+  if (req.method !== "POST") {
+    res.status(405).json({ error: "POST만 지원합니다." });
+    return;
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return {
-      statusCode: 500,
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ error: "서버에 GEMINI_API_KEY 환경변수가 설정되어 있지 않습니다." }),
-    };
+    res.status(500).json({ error: "서버에 GEMINI_API_KEY 환경변수가 설정되어 있지 않습니다." });
+    return;
   }
 
-  let payload;
-  try {
-    payload = JSON.parse(event.body || "{}");
-  } catch {
-    return {
-      statusCode: 400,
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ error: "잘못된 요청 본문입니다." }),
-    };
+  // Vercel Node 런타임은 Content-Type: application/json 요청 본문을 자동으로
+  // req.body에 파싱해준다(문자열이면 방어적으로 한 번 더 파싱).
+  let payload = req.body;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload || "{}");
+    } catch {
+      res.status(400).json({ error: "잘못된 요청 본문입니다." });
+      return;
+    }
   }
+  payload = payload || {};
 
   const placeName = (payload.placeName || "").trim();
   const reviews = Array.isArray(payload.reviews)
@@ -152,15 +141,12 @@ exports.handler = async (event) => {
     : [];
 
   if (!placeName || !reviews.length) {
-    return {
-      statusCode: 400,
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ error: "placeName, reviews가 필요합니다." }),
-    };
+    res.status(400).json({ error: "placeName, reviews가 필요합니다." });
+    return;
   }
 
   try {
-    const res = await fetch(`${geminiUrl(GEMINI_MODEL)}?key=${apiKey}`, {
+    const geminiRes = await fetch(`${geminiUrl(GEMINI_MODEL)}?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -171,9 +157,9 @@ exports.handler = async (event) => {
         },
       }),
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const message = (data && data.error && data.error.message) || `HTTP ${res.status}`;
+    const data = await geminiRes.json().catch(() => ({}));
+    if (!geminiRes.ok) {
+      const message = (data && data.error && data.error.message) || `HTTP ${geminiRes.status}`;
       throw new Error(`Gemini API 호출 실패: ${message}`);
     }
 
@@ -181,16 +167,8 @@ exports.handler = async (event) => {
     if (!text) throw new Error("Gemini 응답에서 분석 결과를 찾지 못했습니다.");
 
     const parsed = JSON.parse(text);
-    return {
-      statusCode: 200,
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ analyzed: true, result: normalizeAnalysis(parsed) }),
-    };
+    res.status(200).json({ analyzed: true, result: normalizeAnalysis(parsed) });
   } catch (err) {
-    return {
-      statusCode: 502,
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ error: err.message }),
-    };
+    res.status(502).json({ error: err.message });
   }
 };

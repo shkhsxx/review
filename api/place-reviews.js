@@ -1,26 +1,21 @@
-// netlify/functions/place-reviews.js
+// api/place-reviews.js
 // 구글 Places API (New)를 이용해 특정 가게의 별점/리뷰를 조회하는 프록시.
-// 같은 저장소의 places-google.js(레거시 Text Search)와는 별개의 최신 API 상품이다.
-// New API는 POST + X-Goog-Api-Key / X-Goog-FieldMask 헤더 방식이며 응답 스키마도 다르다.
+// Vercel Serverless Function — 이 파일이 자동으로 GET /api/place-reviews 로 매핑된다.
+// (기존 netlify/functions/place-reviews.js와 동일한 로직, req/res 포맷만 Vercel에 맞춤)
 //
-// 환경변수 (Netlify 사이트 설정 > Environment variables):
+// 환경변수 (Vercel 프로젝트 설정 > Environment Variables):
 //   GOOGLE_PLACES_API_KEY   구글 클라우드 콘솔에서 발급받은 Places API 키 (필수)
-//                           ※ 이 기능을 쓰려면 Cloud 콘솔에서 "Places API (New)"를
-//                             별도로 사용 설정(enable)해야 한다. 레거시 "Places API"와는
-//                             별개의 API 상품이라, places-google.js가 잘 동작하는 키라도
-//                             New API가 비활성화돼 있으면 403 PERMISSION_DENIED가 발생한다.
+//                           ※ Cloud 콘솔에서 "Places API (New)"를 별도로
+//                             사용 설정(enable)해야 한다.
 //
-// 배포 후 호출 경로: /api/place-reviews?name=<가게이름>&x=<경도>&y=<위도>
-// (netlify.toml의 기존 /api/* 리다이렉트가 그대로 이 함수에 연결해준다.)
+// 호출 경로: GET /api/place-reviews?name=<가게이름>&x=<경도>&y=<위도>
 //
 // 동작:
-//   1) Text Search (New)로 이름 기준 후보를 찾는다. locationBias는 검색 편향일 뿐
-//      강제 반경이 아니므로 결과 위치를 그대로 신뢰하지 않는다.
-//   2) 후보 위치와 원래 좌표(x, y) 사이 거리를 Haversine 공식으로 직접 계산해
-//      도보 2분(150m) 반경 안에 있는 후보만 인정한다. 반경 밖이면 못 찾은 것으로 처리한다.
+//   1) Text Search (New)로 이름 기준 후보를 찾는다.
+//   2) 후보 위치와 원래 좌표(x, y) 사이 거리를 Haversine 공식으로 계산해
+//      도보 2분(150m) 반경 안에 있는 후보만 인정한다.
 //   3) 반경 안에서 가장 가까운 후보 1곳만 골라 Place Details (New)로 별점/리뷰/지도
-//      링크를 가져온다. 검색 단계에서는 최소 필드(id/이름/좌표)만 요청하고, 비용이
-//      큰 리뷰 등의 필드는 검증이 끝난 후보 1곳에 대해서만 요청해 과금을 최소화한다.
+//      링크를 가져온다.
 //
 // 응답 형태:
 //   찾음:   { found: true,  place: { name, rating, userRatingCount, reviews, mapsUri } }
@@ -30,19 +25,12 @@ const SEARCH_TEXT_URL = "https://places.googleapis.com/v1/places:searchText";
 const DETAILS_BASE_URL = "https://places.googleapis.com/v1/places";
 
 const MATCH_RADIUS_METERS = 150; // 도보 2분 반경
-// 검색 단계: 후보 식별 + 거리 검증에 필요한 최소 필드만 요청(과금 최소화)
 const SEARCH_FIELD_MASK = "places.id,places.displayName,places.location";
-// 상세 단계: 화면에 보여줄 5개 정보(이름/별점/리뷰개수/리뷰/지도링크)만 요청
 const DETAILS_FIELD_MASK = "displayName,rating,userRatingCount,reviews,googleMapsUri";
-
-const JSON_HEADERS = {
-  "Content-Type": "application/json; charset=utf-8",
-  "Access-Control-Allow-Origin": "*",
-};
 
 /** 두 좌표(위도/경도) 사이의 거리를 미터 단위로 계산한다(Haversine 공식). */
 function haversineDistanceMeters(lat1, lng1, lat2, lng2) {
-  const R = 6371000; // 지구 평균 반지름(m)
+  const R = 6371000;
   const toRad = (deg) => (deg * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
@@ -132,63 +120,41 @@ function normalizeDetails(details, fallbackName) {
   };
 }
 
-exports.handler = async (event) => {
-  if (event.httpMethod === "OPTIONS") {
-    return {
-      statusCode: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
-      body: "",
-    };
+module.exports = async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.status(204).end();
+    return;
   }
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
-    return {
-      statusCode: 500,
-      headers: JSON_HEADERS,
-      body: JSON.stringify({
-        error: "서버에 GOOGLE_PLACES_API_KEY 환경변수가 설정되어 있지 않습니다.",
-      }),
-    };
+    res.status(500).json({ error: "서버에 GOOGLE_PLACES_API_KEY 환경변수가 설정되어 있지 않습니다." });
+    return;
   }
 
-  const name = (event.queryStringParameters?.name || "").trim();
-  const x = parseFloat(event.queryStringParameters?.x); // 경도
-  const y = parseFloat(event.queryStringParameters?.y); // 위도
+  const name = String(req.query.name || "").trim();
+  const x = parseFloat(req.query.x); // 경도
+  const y = parseFloat(req.query.y); // 위도
 
   if (!name || Number.isNaN(x) || Number.isNaN(y)) {
-    return {
-      statusCode: 400,
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ error: "name, x, y 파라미터가 필요합니다." }),
-    };
+    res.status(400).json({ error: "name, x, y 파라미터가 필요합니다." });
+    return;
   }
 
   try {
     const candidate = await searchCandidate(name, y, x, apiKey);
     if (!candidate) {
-      return {
-        statusCode: 200,
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ found: false }),
-      };
+      res.status(200).json({ found: false });
+      return;
     }
 
     const details = await fetchDetails(candidate.id, apiKey);
-    return {
-      statusCode: 200,
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ found: true, place: normalizeDetails(details, name) }),
-    };
+    res.status(200).json({ found: true, place: normalizeDetails(details, name) });
   } catch (err) {
-    return {
-      statusCode: 502,
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ error: err.message }),
-    };
+    res.status(502).json({ error: err.message });
   }
 };
