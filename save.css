@@ -81,11 +81,41 @@
 .place-card__name{font-size:1.0625rem;font-weight:700;letter-spacing:-.02em;margin:0 0 2px;line-height:1.35}
 .place-card__address{font-size:.875rem;color:var(--ink-2);margin:0}
 .place-card__phone{font-size:.8125rem;color:var(--ink-3);font-weight:600;margin:0}
+
+/* ---------- 구글 플레이스 연동 (v0.3.1 — logic 확정 구조 반영) ----------
+   .place-card__source: <span>, .place-card의 항상 존재하는 첫 번째 자식(이름 앞).
+     텍스트는 "카카오"/"구글" 고정. .place-card에 data-source="kakao"|"google" 속성도 붙음.
+   .place-card__rating: <p>, phone 다음/link 이전. 구글 결과 중 평점이 있을 때만 DOM에
+     붙는 조건부 렌더링(빈 상태로 존재하지 않음 — data-empty류 상태 CSS 불필요).
+   category(order:-1)보다 앞에 오도록 order:-2로 배지 두 줄을 상단에 쌓는다. */
+.place-card__source{
+  display:inline-flex;width:fit-content;font-size:.75rem;font-weight:700;
+  padding:4px 10px;border-radius:var(--r-pill);background:var(--bg-soft);
+  color:var(--ink-2);order:-2;margin-bottom:4px;
+}
+.place-card[data-source="google"] .place-card__source{background:var(--coral-soft);color:var(--coral)}
+
+.place-card__rating{
+  display:flex;align-items:center;gap:4px;
+  font-size:.8125rem;font-weight:700;color:var(--ink);margin:2px 0 0;
+}
+.place-card__rating::before{content:"★";color:var(--tangerine);font-size:.75rem;line-height:1}
+
 .place-card__link{
   align-self:flex-start;font-size:.8125rem;font-weight:700;color:var(--coral);
   text-decoration:none;margin-top:4px;
 }
 .place-card__link:hover{text-decoration:underline}
+
+/* ---------- 사진 썸네일 (구현 보류) ----------
+   Google Text Search 응답만으로는 사진을 못 가져와 별도 Photo API 연동 전까지 미사용.
+   .place-card__photo-wrap / .place-card__photo 는 삭제하지 않고 남겨둠 — 추후
+   사진 필드가 붙으면 이 스타일을 그대로 적용하면 된다. */
+.place-card__photo-wrap{
+  margin:-18px -18px 12px;aspect-ratio:4/3;overflow:hidden;
+  border-radius:var(--r-lg) var(--r-lg) 0 0;background:var(--bg-soft);
+}
+.place-card__photo{width:100%;height:100%;object-fit:cover;display:block}
 
 .place-card__save-btn{
   margin-top:14px;align-self:flex-start;
@@ -96,6 +126,60 @@
 }
 .place-card__save-btn:hover:not(:disabled){background:var(--bg-soft)}
 .place-card__save-btn:disabled{background:var(--ink);color:var(--bg);border-color:var(--ink);opacity:.9;cursor:default}
+
+/* ---------- 리뷰 패널 (v0.4, logic 확정 구조 반영) ----------
+   .review-panel은 모달이 아니라 .search-results와 .saved-list 사이에 놓이는
+   일반 <section>. 기본은 [hidden] 속성으로 숨겨져 있다가 카드 클릭 시 JS가
+   hidden을 제거해 나타난다. "카드"(--white + --shadow-sm) 계열 톤을 재사용해
+   .panel(style.css)과 동일한 레시피로 만들었다 — .saved-list(--bg-soft 컨테이너)와
+   나란히 있을 때 서로 다른 성격(상시 노출 목록 vs 클릭 시 나타나는 상세 보기)이
+   시각적으로 구분되도록 하기 위함.
+
+   [hidden] 주의: .review-panel 자체와 .review-panel__map-link는 각각 JS가
+   hidden 속성을 직접 토글한다. .review-panel에 display:flex를 주므로
+   [hidden] 기본 규칙(display:none)이 묻히지 않도록 .review-panel[hidden]을
+   명시적으로 되살려준다. 나머지(__loading, __not-found, __map-link)는
+   display 속성을 따로 지정하지 않아 [hidden] 기본 동작이 그대로 유지된다
+   (map-link는 flex item으로 blockify되므로 별도 display 지정이 필요 없음). */
+.review-panel{
+  display:flex;flex-direction:column;gap:var(--sp-4);
+  background:var(--white);border:1px solid var(--border-soft);border-radius:var(--r-lg);
+  box-shadow:var(--shadow-sm);padding:clamp(24px,3.4vw,34px);
+  margin-bottom:clamp(40px,6vw,64px);
+}
+.review-panel[hidden]{display:none}
+
+.review-panel__header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.review-panel__name{font-size:1.125rem;font-weight:700;letter-spacing:-.02em;margin:0}
+.review-panel__close-btn{
+  flex:none;padding:7px 14px;border-radius:var(--r-pill);border:1px solid var(--ink);
+  font-weight:700;font-size:.8125rem;color:var(--ink);background:none;
+  transition:background .16s ease;
+}
+.review-panel__close-btn:hover{background:var(--bg-soft)}
+
+.review-panel__rating{font-size:1rem;font-weight:700;color:var(--ink);margin:0}
+
+.review-panel__loading,
+.review-panel__not-found{margin:0;text-align:center;padding:clamp(24px,4vw,40px) 16px;color:var(--ink-2);font-size:.9375rem}
+
+.review-panel__list{display:flex;flex-direction:column;gap:12px}
+
+.review-item{
+  display:flex;flex-wrap:wrap;align-items:baseline;column-gap:8px;row-gap:2px;
+  background:var(--bg-soft);border:1px solid var(--border-soft);border-radius:var(--r-md);
+  padding:14px;
+}
+.review-item__author{font-weight:700;font-size:.9375rem;color:var(--ink);margin:0}
+.review-item__rating{font-size:.8125rem;font-weight:700;color:var(--ink);margin:0}
+.review-item__date{font-size:.8125rem;color:var(--ink-3);font-weight:600;margin:0 0 0 auto}
+.review-item__content{flex-basis:100%;margin:6px 0 0;color:var(--ink-2);font-size:.9375rem;line-height:1.6}
+
+.review-panel__map-link{
+  align-self:flex-start;font-size:.875rem;font-weight:700;color:var(--coral);
+  text-decoration:none;
+}
+.review-panel__map-link:hover{text-decoration:underline}
 
 /* ---------- 담은 목록 ---------- */
 .saved-list{background:var(--bg-soft);border-radius:clamp(20px,3vw,32px);padding:clamp(24px,4vw,40px)}

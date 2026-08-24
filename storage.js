@@ -6,6 +6,9 @@
  * [
  *   {
  *     id: "kakao-<place_id>",       // 카카오 place_id 기반 고유 id
+ *                                   // (구글 검색 결과는 "google-<place_id>" 접두사를 사용한다.
+ *                                   //  기존에 저장된 "kakao-" 데이터와는 접두사만 다를 뿐
+ *                                   //  구조가 동일해 호환된다.)
  *     placeId: "26338954",
  *     name: "가게 이름",
  *     category: "음식점 > 한식",
@@ -44,11 +47,16 @@ function _writeSavedPlaces(list) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
 }
 
-/** 카카오 검색 결과 document로부터 안정적인 고유 id를 만든다. */
+/**
+ * 검색 결과 place로부터 안정적인 고유 id를 만든다.
+ * place.source 값에 따라 접두사를 다르게 붙인다("kakao" | "google").
+ * source가 없으면(기존 카카오 전용 코드와의 호환을 위해) 기본값은 "kakao"다.
+ */
 function buildPlaceId(place) {
-  if (place.id) return `kakao-${place.id}`;
+  const prefix = place.source === "google" ? "google" : "kakao";
+  if (place.id) return `${prefix}-${place.id}`;
   // id가 없을 때를 대비한 fallback (이름+주소 조합)
-  return `kakao-${place.place_name || ""}-${place.address_name || ""}`;
+  return `${prefix}-${place.place_name || ""}-${place.address_name || ""}`;
 }
 
 /**

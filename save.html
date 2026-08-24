@@ -25,12 +25,35 @@
   │  ├─ .search-results__title
   │  └─ .place-card-list           카드들을 담는 컨테이너 (JS가 .place-card를 채워넣음)
   │     └─ .place-card             (JS가 동적으로 생성하는 카드 — 아래 구조 참고)
+  │        ├─ .place-card__source      (span, "카카오" / "구글" 출처 표시)
   │        ├─ .place-card__name
   │        ├─ .place-card__category
   │        ├─ .place-card__address
-  │        ├─ .place-card__phone       (전화번호 없으면 렌더링 안 함)
-  │        ├─ .place-card__link        (a 태그, 카카오 플레이스 링크)
+  │        ├─ .place-card__phone       (전화번호 없으면 렌더링 안 함, 구글 결과는 항상 없음)
+  │        ├─ .place-card__rating      (평점, 구글 결과에만 있을 때 렌더링)
+  │        ├─ .place-card__link        (a 태그, 카카오 플레이스/구글 지도 링크)
   │        └─ .place-card__save-btn    (button, "담기" / "담음" 토글)
+  │
+  │     ※ 검색 결과는 카카오 로컬 API + 구글 플레이스 API(Text Search) 결과를 합쳐서
+  │        같은 .place-card-list 안에 렌더링합니다. data-source 속성("kakao"/"google")으로
+  │        카드의 출처를 구분할 수 있습니다.
+  │     ※ .place-card 자체를 클릭하면(저장 버튼/링크 클릭은 제외) 아래 .review-panel이
+  │        열리고 그 가게의 구글 리뷰를 보여줍니다.
+  │
+  ├─ .review-panel                 가게 리뷰 보기 패널 (기본 hidden, 카드 클릭 시 표시)
+  │  ├─ .review-panel__header       이름 + 닫기 버튼을 담는 상단 행
+  │  │  ├─ .review-panel__name      가게 이름
+  │  │  └─ .review-panel__close-btn (button, 패널 닫기)
+  │  ├─ .review-panel__rating       평점 + 리뷰 개수 요약 텍스트 (예: "★ 4.5 (리뷰 128개)")
+  │  ├─ .review-panel__loading      "리뷰를 불러오는 중..." 로딩 문구 (JS가 표시/숨김 토글)
+  │  ├─ .review-panel__not-found    가게를 못 찾았을 때 / 조회 실패 시 안내 문구 (JS가 표시/숨김 토글 + 텍스트 교체)
+  │  ├─ .review-panel__list         리뷰 목록 컨테이너 (JS가 .review-item을 채워넣음)
+  │  │  └─ .review-item             리뷰 한 건 (JS가 동적으로 생성 — 아래 구조 참고)
+  │  │     ├─ .review-item__author    작성자
+  │  │     ├─ .review-item__rating    별점 (예: "★ 5")
+  │  │     ├─ .review-item__date      작성 시점 (구글이 내려주는 상대 시간 문자열, 예: "2개월 전")
+  │  │     └─ .review-item__content   리뷰 내용
+  │  └─ .review-panel__map-link     (a 태그, 구글 지도에서 전체 리뷰 보기 — 결과 없으면 숨김)
   │
   └─ .saved-list                   담은 목록 영역
      ├─ .saved-list__title
@@ -45,6 +68,16 @@
   data-* 속성:
   - .place-card, .saved-item 에는 각각 data-place-id 속성을 부여해
     JS에서 담기/제거 대상 식별에 사용합니다. (스타일링에는 사용되지 않음)
+  - .place-card 에는 data-source 속성("kakao" | "google")도 부여됩니다.
+    (식별용이지만 필요하면 [data-source="google"] 처럼 선택자로 스타일링에
+    활용하셔도 됩니다.)
+
+  .review-panel 관련 참고:
+  - /api/place-reviews (구글 Places API (New) 프록시)를 호출해 별점/리뷰/구글맵 링크를
+    가져옵니다. 같은 가게를 다시 클릭하면 재요청 없이 캐시된 값을 바로 보여줍니다.
+  - 좌표 기준 150m(도보 2분) 밖에서 찾은 동명(同名) 결과는 무시하고, 아예 못 찾으면
+    .review-panel__not-found 문구만 보여주고 .review-panel__list/.review-panel__map-link는
+    비워/숨김 처리합니다.
 -->
 <!DOCTYPE html>
 <html lang="ko">
@@ -88,6 +121,28 @@
     <div class="place-card-list" id="place-card-list">
       <!-- save.js가 검색 결과에 따라 .place-card 를 여기에 렌더링합니다 -->
     </div>
+  </section>
+
+  <section class="review-panel" aria-label="가게 리뷰 보기" id="review-panel" hidden>
+    <div class="review-panel__header">
+      <h2 class="review-panel__name" id="review-panel-name"></h2>
+      <button type="button" class="review-panel__close-btn" id="review-panel-close-btn">닫기</button>
+    </div>
+    <p class="review-panel__rating" id="review-panel-rating"></p>
+    <p class="review-panel__loading" id="review-panel-loading" hidden>리뷰를 불러오는 중...</p>
+    <p class="review-panel__not-found" id="review-panel-not-found" hidden>구글에서 이 가게를 찾을 수 없어요.</p>
+    <div class="review-panel__list" id="review-panel-list">
+      <!-- save.js가 조회한 리뷰 데이터를 기반으로 .review-item 을 여기에 렌더링합니다 -->
+    </div>
+    <a
+      class="review-panel__map-link"
+      id="review-panel-map-link"
+      href="#"
+      target="_blank"
+      rel="noopener noreferrer"
+      hidden
+      >구글 지도에서 전체 리뷰 보기</a
+    >
   </section>
 
   <section class="saved-list" aria-label="담은 맛집 목록">
