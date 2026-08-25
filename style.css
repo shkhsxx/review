@@ -136,6 +136,7 @@ header.stuck{border-bottom-color:var(--border-soft)}
   padding:10px 14px;border-radius:var(--r-sm);margin:-8px 0 20px}
 .auth-modal__hint[hidden]{display:none}
 .auth-modal__form{display:flex;flex-direction:column;gap:6px}
+.auth-modal__form[hidden]{display:none}
 .auth-modal__label{font-size:.8125rem;font-weight:700;color:var(--ink-2);margin-top:10px}
 .auth-modal__input{
   font:inherit;font-size:1rem;padding:12px 14px;border:1px solid var(--border);
@@ -147,6 +148,19 @@ header.stuck{border-bottom-color:var(--border-soft)}
 .auth-modal__error[hidden]{display:none}
 .auth-modal__actions{display:flex;gap:8px;margin-top:18px}
 .auth-modal__actions .btn{flex:1;padding-inline:12px}
+.auth-modal__success{color:var(--ink);background:var(--bg-soft);font-size:.875rem;font-weight:600;
+  padding:10px 14px;border-radius:var(--r-sm);margin:10px 0 0}
+.auth-modal__success[hidden]{display:none}
+
+.auth-modal__links{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px}
+.auth-modal__links-divider{color:var(--ink-3)}
+.auth-modal__link-btn{font-size:.8125rem;font-weight:700;color:var(--ink-2);padding:4px;transition:color .16s ease}
+.auth-modal__link-btn:hover{color:var(--coral)}
+
+.auth-modal__panel{display:flex;flex-direction:column}
+.auth-modal__panel[hidden]{display:none}
+.auth-modal__panel-text{font-size:.9375rem;color:var(--ink-2);line-height:1.6;margin:0 0 16px}
+.auth-modal__panel>.auth-modal__link-btn{align-self:flex-start;margin-top:14px}
 
 /* ---------- Hero ---------- */
 .hero{position:relative;padding-top:clamp(48px,8vw,88px);padding-bottom:var(--sec);overflow:hidden}

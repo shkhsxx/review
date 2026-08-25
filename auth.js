@@ -64,6 +64,8 @@ function mapAuthError(error) {
   if (/email/i.test(msg) && /invalid/i.test(msg)) return "올바른 이메일 형식이 아닙니다.";
   if (/email not confirmed/i.test(msg)) return "이메일 인증이 필요합니다.";
   if (/rate limit|security purposes/i.test(msg)) return "잠시 후 다시 시도해주세요.";
+  if (/different from the old password/i.test(msg)) return "이전 비밀번호와 다른 비밀번호를 입력해주세요.";
+  if (/auth session missing/i.test(msg)) return "링크가 만료되었거나 올바르지 않습니다.";
   return msg || "알 수 없는 오류가 발생했습니다.";
 }
 
@@ -85,5 +87,17 @@ export async function signIn(email, password) {
 
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
+  if (error) throw new Error(mapAuthError(error));
+}
+
+/** 비밀번호 재설정 링크를 이메일로 보낸다. 링크를 클릭하면 redirectTo로 이동한다. */
+export async function resetPasswordForEmail(email, redirectTo) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) throw new Error(mapAuthError(error));
+}
+
+/** 비밀번호 재설정 링크로 들어온 세션에서 새 비밀번호로 바꾼다. */
+export async function updatePassword(newPassword) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) throw new Error(mapAuthError(error));
 }
