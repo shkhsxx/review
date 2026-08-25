@@ -26,6 +26,7 @@
   │
   ├─ .search-results               검색 결과 리스트 영역
   │  ├─ .search-results__title
+  │  ├─ .search-results__hint      카드 클릭하면 리뷰/AI 분석이 열린다는 안내(정적 텍스트)
   │  └─ .place-card-list           카드들을 담는 컨테이너 (JS가 .place-card를 채워넣음)
   │     └─ .place-card             (JS가 동적으로 생성하는 카드 — 아래 구조 참고)
   │        ├─ .place-card__source      (span, "카카오" / "구글" 출처 표시)
@@ -149,6 +150,7 @@
 
   <section class="search-results" aria-label="검색 결과">
     <h2 class="search-results__title">검색 결과</h2>
+    <p class="search-results__hint">카드를 눌러보면 리뷰와 AI 분석을 볼 수 있어요.</p>
     <div class="place-card-list" id="place-card-list">
       <!-- save.js가 검색 결과에 따라 .place-card 를 여기에 렌더링합니다 -->
     </div>

@@ -60,7 +60,8 @@
 
 /* ---------- 검색 결과 (카드형) ---------- */
 .search-results{margin-bottom:clamp(40px,6vw,64px)}
-.search-results__title{font-size:1.125rem;font-weight:700;letter-spacing:-.02em;margin:0 0 16px}
+.search-results__title{font-size:1.125rem;font-weight:700;letter-spacing:-.02em;margin:0 0 4px}
+.search-results__hint{font-size:.8125rem;color:var(--ink-3);margin:0 0 16px}
 
 .place-card-list{display:grid;gap:16px;grid-template-columns:1fr}
 @media(min-width:640px){.place-card-list{grid-template-columns:repeat(2,1fr)}}
