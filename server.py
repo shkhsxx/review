@@ -38,6 +38,11 @@ New Places API)를 프론트엔드(save.js)에서 바로 호출하지 못하도�
     - language, region, location, radius, type, pagetoken 파라미터는 그대로 구글 API에
       전달(pass-through)한다.
 
+    GET /api/place-photo?photo_reference=<참조값>&maxwidth=<px>
+
+    - /api/places-google 응답의 photos[].photo_reference로 실제 사진 바이트를 대신
+      받아와 그대로 돌려준다(JSON이 아니라 이미지 바이트 응답). maxwidth 기본값 400px.
+
     GET /api/place-reviews?name=<가게이름>&x=<경도>&y=<위도>
 
     - 구글 Places API (New)로 특정 가게의 별점/리뷰/구글맵 링크를 조회한다.
@@ -62,6 +67,7 @@ New Places API)를 프론트엔드(save.js)에서 바로 호출하지 못하도�
 import json
 import math
 import os
+import re
 import ssl
 import urllib.error
 import urllib.parse
@@ -243,6 +249,39 @@ def search_places_google(query_params):
     return _call_google_places(params)
 
 
+GOOGLE_PLACE_PHOTO_URL = "https://maps.googleapis.com/maps/api/place/photo"
+DEFAULT_PHOTO_MAX_WIDTH = 400
+MAX_ALLOWED_PHOTO_WIDTH = 1600  # 과도한 트래픽/비용 방지용 상한
+
+
+def get_place_photo(query_params):
+    """photo_reference로 구글 사진 바이트를 대신 받아온다(키를 클라이언트에 노출하지 않기 위함).
+    반환값: (status, content_type, raw_bytes)"""
+    api_key = _get_google_places_api_key()
+    photo_reference = query_params.get("photo_reference", "").strip()
+    if not photo_reference:
+        raise ApiError(400, "photo_reference 파라미터가 필요합니다.")
+
+    try:
+        maxwidth = int(query_params.get("maxwidth", DEFAULT_PHOTO_MAX_WIDTH))
+    except (TypeError, ValueError):
+        maxwidth = DEFAULT_PHOTO_MAX_WIDTH
+    maxwidth = min(max(maxwidth, 1), MAX_ALLOWED_PHOTO_WIDTH)
+
+    query_string = urllib.parse.urlencode(
+        {"maxwidth": maxwidth, "photo_reference": photo_reference, "key": api_key}
+    )
+    full_url = f"{GOOGLE_PLACE_PHOTO_URL}?{query_string}"
+    try:
+        with urllib.request.urlopen(full_url, timeout=10, context=_SSL_CONTEXT) as res:
+            content_type = res.headers.get("Content-Type", "image/jpeg")
+            return res.status, content_type, res.read()
+    except urllib.error.HTTPError as e:
+        raise ApiError(502, f"사진을 불러오지 못했습니다. (HTTP {e.code})")
+    except urllib.error.URLError as e:
+        raise ApiError(502, f"사진 조회 중 오류가 발생했습니다: {e.reason}")
+
+
 def _haversine_distance_meters(lat1, lng1, lat2, lng2):
     """두 좌표(위도/경도) 사이의 거리를 미터 단위로 계산한다(Haversine 공식)."""
     radius = 6371000  # 지구 평균 반지름(m)
@@ -312,6 +351,60 @@ def _search_google_place_candidate(name, lat, lng, api_key):
     return closest
 
 
+# ---------- 협찬/체험단 의심 리뷰 판별 (규칙 기반 v1) ----------
+# 구글 리뷰 API는 계정 가입일·하루 작성 건수 같은 이력 정보를 주지 않으므로
+# 리뷰 본문 텍스트 신호만으로 판별한다. 삭제하지 않고 isAd/adReasons로 표시만 하고
+# (F2 "필터링"은 "숨김"이 아니라 "왜 걸러졌는지 함께 보여주기"가 원칙 — 홈 화면 신뢰도
+# 섹션 참고), AI 감성분석(save.js)에서는 제외한다.
+# ※ api/place-reviews.js의 AD_STRONG_PATTERNS/AD_WEAK_PATTERNS와 반드시 동일하게 유지할 것.
+AD_STRONG_PATTERNS = [
+    (re.compile(r"협찬"), "협찬 문구 감지"),
+    (re.compile(r"제공\s*받(았|아)"), "제품/서비스 제공 문구 감지"),
+    (re.compile(r"체험단"), "체험단 문구 감지"),
+    (re.compile(r"서포터즈"), "서포터즈 문구 감지"),
+    (re.compile(r"원고료"), "원고료 문구 감지"),
+    (re.compile(r"유료\s*광고"), "유료 광고 문구 감지"),
+    (re.compile(r"해당\s*(리뷰|게시물|포스팅)(은|는)"), "정형화된 광고 고지 문구 감지"),
+]
+
+AD_WEAK_PATTERNS = [
+    re.compile(r"인생\s*맛집"),
+    re.compile(r"찐\s*맛집"),
+    re.compile(r"강추"),
+    re.compile(r"적극\s*추천"),
+    re.compile(r"무조건\s*(가세요|추천)"),
+    re.compile(r"성지"),
+    re.compile(r"존맛"),
+]
+
+_EXCESSIVE_EXCLAMATION = re.compile(r"!{3,}")
+_EMOJI_PATTERN = re.compile(
+    "[\U0001F300-\U0001FAFF☀-➿]"
+)
+
+
+def _detect_ad_review(content):
+    """리뷰 본문 텍스트에서 협찬/체험단 의심 신호를 규칙 기반으로 찾는다."""
+    text = content or ""
+    reasons = []
+
+    for pattern, reason in AD_STRONG_PATTERNS:
+        if pattern.search(text) and reason not in reasons:
+            reasons.append(reason)
+
+    weak_hits = sum(1 for pattern in AD_WEAK_PATTERNS if pattern.search(text))
+    if weak_hits >= 2:
+        reasons.append(f"과장 표현 반복 ({weak_hits}건)")
+
+    if _EXCESSIVE_EXCLAMATION.search(text):
+        reasons.append("느낌표 과다 사용")
+
+    if len(_EMOJI_PATTERN.findall(text)) >= 3:
+        reasons.append("이모지 과다 사용")
+
+    return bool(reasons), reasons
+
+
 def _normalize_place_details(details, fallback_name):
     """Place Details(New) 응답을 화면에서 바로 쓰기 좋은 형태(5개 정보)로 정리한다."""
     display_name = details.get("displayName") or {}
@@ -320,12 +413,16 @@ def _normalize_place_details(details, fallback_name):
         author_attribution = review.get("authorAttribution") or {}
         text = review.get("text") or {}
         original_text = review.get("originalText") or {}
+        content = text.get("text") or original_text.get("text") or ""
+        is_ad, ad_reasons = _detect_ad_review(content)
         reviews.append(
             {
                 "author": author_attribution.get("displayName") or "익명",
                 "rating": review.get("rating"),
                 "date": review.get("relativePublishTimeDescription", ""),
-                "content": text.get("text") or original_text.get("text") or "",
+                "content": content,
+                "isAd": is_ad,
+                "adReasons": ad_reasons,
             }
         )
     return {
@@ -489,6 +586,15 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_binary(self, status, content_type, body):
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Cache-Control", "public, max-age=86400")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_OPTIONS(self):
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -541,6 +647,17 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(e.status, {"error": e.message})
             return
 
+        if parsed.path == "/api/place-photo":
+            query_params = {
+                k: v[0] for k, v in urllib.parse.parse_qs(parsed.query).items()
+            }
+            try:
+                status, content_type, body = get_place_photo(query_params)
+                self._send_binary(status, content_type, body)
+            except ApiError as e:
+                self._send_json(e.status, {"error": e.message})
+            return
+
         if parsed.path == "/api/place-reviews":
             query_params = {
                 k: v[0] for k, v in urllib.parse.parse_qs(parsed.query).items()
@@ -569,6 +686,7 @@ def main():
     print(f"맛집 검색 프록시 서버 실행 중: http://localhost:{port}")
     print("엔드포인트: GET /api/search?query=<검색어>&category_group_code=<코드>")
     print("엔드포인트: GET /api/places-google?query=<검색어>")
+    print("엔드포인트: GET /api/place-photo?photo_reference=<참조값>&maxwidth=<px>")
     print("엔드포인트: GET /api/place-reviews?name=<가게이름>&x=<경도>&y=<위도>")
     print("엔드포인트: POST /api/analyze-reviews (body: {placeName, reviews})")
     if not os.environ.get("KAKAO_REST_API_KEY"):

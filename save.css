@@ -110,12 +110,12 @@
 }
 .place-card__link:hover{text-decoration:underline}
 
-/* ---------- 사진 썸네일 (구현 보류) ----------
-   Google Text Search 응답만으로는 사진을 못 가져와 별도 Photo API 연동 전까지 미사용.
-   .place-card__photo-wrap / .place-card__photo 는 삭제하지 않고 남겨둠 — 추후
-   사진 필드가 붙으면 이 스타일을 그대로 적용하면 된다. */
+/* ---------- 사진 썸네일 ----------
+   구글 결과에만 존재(카카오는 사진 필드 없음). save.js가 photoRef가 있을 때만
+   .place-card__photo-wrap을 만들어 넣는다(DOM 첫 번째 자식으로 추가). order:-3으로
+   .place-card__source(order:-2)/.place-card__category(order:-1)보다 항상 위에 오게 한다. */
 .place-card__photo-wrap{
-  margin:-18px -18px 12px;aspect-ratio:4/3;overflow:hidden;
+  order:-3;margin:-18px -18px 12px;aspect-ratio:4/3;overflow:hidden;
   border-radius:var(--r-lg) var(--r-lg) 0 0;background:var(--bg-soft);
 }
 .place-card__photo{width:100%;height:100%;object-fit:cover;display:block}
@@ -179,6 +179,11 @@
 .review-item__rating{font-size:.8125rem;font-weight:700;color:var(--ink);margin:0}
 .review-item__date{font-size:.8125rem;color:var(--ink-3);font-weight:600;margin:0 0 0 auto}
 .review-item__content{flex-basis:100%;margin:6px 0 0;color:var(--ink-2);font-size:.9375rem;line-height:1.6}
+
+/* 협찬/체험단 의심 리뷰: 지우지 않고 톤만 낮춘 뒤, 아래 .flag로 이유를 함께 보여준다. */
+.review-item--ad-suspected{background:var(--coral-soft)}
+.review-item__ad-flags{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.review-item__ad-flags .flag{background:var(--white);color:var(--coral-dark)}
 
 .review-panel__map-link{
   align-self:flex-start;font-size:.875rem;font-weight:700;color:var(--coral);

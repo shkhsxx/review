@@ -218,6 +218,7 @@ function normalizeKakaoPlace(doc) {
  */
 function normalizeGooglePlace(googlePlace) {
   const location = googlePlace.geometry && googlePlace.geometry.location;
+  const firstPhoto = Array.isArray(googlePlace.photos) ? googlePlace.photos[0] : null;
   return {
     source: "google",
     id: googlePlace.place_id || "",
@@ -235,6 +236,8 @@ function normalizeGooglePlace(googlePlace) {
     x: location ? String(location.lng) : "",
     y: location ? String(location.lat) : "",
     rating: typeof googlePlace.rating === "number" ? googlePlace.rating : null,
+    // 카카오는 사진 필드를 주지 않으므로 구글 결과에만 존재한다(/api/place-photo로 대신 받아옴).
+    photoRef: firstPhoto ? firstPhoto.photo_reference || "" : "",
   };
 }
 
@@ -265,6 +268,22 @@ function createPlaceCard(place) {
   card.className = "place-card";
   card.dataset.placeId = placeId;
   card.dataset.source = place.source || "kakao";
+
+  if (place.photoRef) {
+    const photoWrap = document.createElement("div");
+    photoWrap.className = "place-card__photo-wrap";
+
+    const photo = document.createElement("img");
+    photo.className = "place-card__photo";
+    photo.src = `${API_BASE_URL}/api/place-photo?photo_reference=${encodeURIComponent(
+      place.photoRef
+    )}&maxwidth=400`;
+    photo.alt = "";
+    photo.loading = "lazy";
+    photoWrap.appendChild(photo);
+
+    card.appendChild(photoWrap);
+  }
 
   if (place.source) {
     const source = document.createElement("span");
@@ -507,7 +526,9 @@ function toggleAnalysisBody() {
  * .review-panel__analysis를 숨긴 채로 둔다. 캐시가 있으면 재요청 없이 바로 보여준다.
  */
 async function maybeStartAnalysis(place, cacheKey, reviewResult) {
-  const reviews = reviewResult && reviewResult.found ? reviewResult.place.reviews || [] : [];
+  const allReviews = reviewResult && reviewResult.found ? reviewResult.place.reviews || [] : [];
+  // 협찬/체험단 의심 리뷰는 화면에는 표시하되(createReviewItem), AI 감성분석 근거에서는 제외한다.
+  const reviews = allReviews.filter((review) => !review.isAd);
   if (!reviews.length) {
     reviewPanelAnalysis.hidden = true;
     return;
@@ -545,6 +566,7 @@ async function maybeStartAnalysis(place, cacheKey, reviewResult) {
 function createReviewItem(review) {
   const item = document.createElement("article");
   item.className = "review-item";
+  if (review.isAd) item.classList.add("review-item--ad-suspected");
 
   const author = document.createElement("p");
   author.className = "review-item__author";
@@ -565,6 +587,19 @@ function createReviewItem(review) {
   content.className = "review-item__content";
   content.textContent = review.content || "";
   item.appendChild(content);
+
+  // 협찬/체험단 의심 리뷰는 지우지 않고, 왜 걸러졌는지 이유를 함께 보여준다.
+  if (review.isAd && Array.isArray(review.adReasons) && review.adReasons.length) {
+    const flags = document.createElement("div");
+    flags.className = "review-item__ad-flags";
+    review.adReasons.forEach((reason) => {
+      const flag = document.createElement("span");
+      flag.className = "flag";
+      flag.textContent = `협찬 의심 · ${reason}`;
+      flags.appendChild(flag);
+    });
+    item.appendChild(flags);
+  }
 
   return item;
 }

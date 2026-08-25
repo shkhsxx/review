@@ -1,11 +1,17 @@
 # 오늘뭐먹지 — Design System
 
-> v0.4 · 2026-08-24
+> v0.5 · 2026-08-25
 > 레퍼런스: Airbnb Design Language (Airbnb Cereal 타이포, 코랄 포인트, 카드 기반 레이아웃)
 
 ---
 
 ## 0. 변경 요약
+
+### v0.5 — 가게 사진 연동 완료, 협찬/체험단 의심 리뷰 표시 추가
+PRD 8장 "미해결 질문" 중 두 가지를 이번 버전에서 해소했다.
+
+- **`.place-card__photo`/`.place-card__photo-wrap` 구현 보류 해제.** `api/place-photo.js`(+ `server.py`의 `/api/place-photo`)가 구글 레거시 Photo API를 대신 호출해 이미지 바이트만 돌려주는 프록시로 추가되어(키 노출 방지, 기존 프록시들과 같은 패턴), 구글 결과에만 있는 `photos[0].photo_reference`로 썸네일을 붙일 수 있게 됐다. 카카오는 여전히 사진 필드가 없어 `photoRef`가 없을 때는 기존처럼 사진 없이 렌더링된다(조건부 렌더링 규칙 유지). 스타일은 v0.3.1에서 준비해둔 것을 그대로 쓰되, `order:-3`을 추가해 `.place-card__source`(order:-2)/`.place-card__category`(order:-1)보다 항상 위에 오도록 고정했다(썸네일이 DOM 삽입 순서와 무관하게 카드 최상단에 오도록).
+- **협찬/체험단 의심 리뷰 표시(규칙 기반 v1).** `.review-item`에 `--ad-suspected` 상태를 추가했다 — 별도 컴포넌트를 새로 만들지 않고 4장 "카드 안의 카드" 배경만 `--coral-soft`로 낮춰 얹었다. 이유가 되는 문구는 기존 4장 `.flag` pill(별도 스타일 추가 없이 재사용)로 리뷰 아래 나열한다. **삭제가 아니라 표시**로 구현한 것은 홈 화면 "왜 믿을 수 있나" 섹션의 원칙("걸러낸 리뷰는 삭제하지 않고 왜 걸러졌는지 함께 보여줍니다")을 실제 기능에도 그대로 적용한 것 — 지금까지는 그 섹션이 정적 목업 텍스트였는데, 이번에 처음으로 실제 동작하는 필터가 붙었다.
 
 ### v0.4 — 리뷰 패널 (구글 리뷰보기) 스타일 확정, logic/design 병렬 작업 마무리
 logic이 "가게 클릭 → 리뷰 패널 열림" 기능 구현을 완료해 정확한 구조를 전달받았다. `save.css`에 `.review-panel`/`.review-item` 계열 스타일을 추가했다.
@@ -179,7 +185,7 @@ hover 시 `--shadow-md`로 전환(리프트는 최소화, `translateY(-2px)` 정
 |---|---|---|
 | `.place-card__source` | `<span>`, `.place-card`의 항상 존재하는 첫 번째 자식(이름 앞). `.place-card`에 `data-source="kakao"\|"google"`도 부여됨 | `category`와 같은 톤의 작은 pill 배지(`--r-pill`, `--bg-soft`/`--ink-2`)로 상단에 쌓는다. `category`(order:-1)보다 먼저 오도록 `order:-2` 부여. 구글 결과만 `--coral-soft`/`--coral`로 살짝 틴트해 "새로 연동된 소스"임을 은근히 구분 — `--coral`을 배지 배경 전체가 아닌 연한 틴트로만 쓰고 카카오는 손대지 않아 "Primary 색은 하나, 남용 금지" 원칙을 지킨다. |
 | `.place-card__rating` | 평범한 `<p>`, phone 다음/link 이전 위치. **값이 있을 때만 DOM에 붙는 조건부 렌더링**(빈 상태로 존재하지 않음) | v0.3에서 준비했던 pill 배지 + `data-empty` 톤다운 상태는 폐기 — 엘리먼트 자체가 없을 때를 "빈 뱃지"로 잘못 가정한 설계였다(해당 상태는 렌더링 조건상 영원히 트리거될 수 없는 죽은 코드였음). 대신 `address`/`phone`과 같은 톤의 텍스트 라인으로 단순화하고, 별 아이콘(`::before`, `--tangerine`)만 접두어로 유지했다. |
-| `.place-card__photo` / `__photo-wrap` | **구현 보류.** Google Text Search 응답만으로는 사진을 못 가져오고 별도 Photo API 호출이 필요해 이번 범위에서 제외됨 | 스타일은 삭제하지 않고 보류 상태로 남김(풀블리드 썸네일, `aspect-ratio 4/3`, 상단 모서리만 `--r-lg`). 추후 사진 필드가 붙으면 class명만 맞춰 그대로 재사용. |
+| `.place-card__photo` / `__photo-wrap` | **구현 완료 (v0.5).** 구글 결과에만 `photoRef`가 있을 때 `.place-card`의 첫 자식으로 삽입됨(`api/place-photo.js` 프록시 경유) | 풀블리드 썸네일, `aspect-ratio 4/3`, 상단 모서리만 `--r-lg`. `order:-3`으로 `__source`/`__category`보다 항상 위에 오도록 고정. 카카오 결과는 `photoRef`가 없어 조건부로 렌더링 안 됨. |
 
 #### 카드 — 리뷰 패널 (v0.4, logic 확정 구조 반영)
 "가게 클릭 → 리뷰 패널 열림" 기능. `.review-panel`은 `.search-results`와 `.saved-list` 사이의 일반 `<section>`이며 기본 `[hidden]`, 카드 클릭 시 JS가 속성을 제거해 노출한다(모달 아님).
@@ -248,7 +254,8 @@ pill 또는 라운드 사각형, 1px 보더. 선택 시 배경 `--coral`, 텍스
 |---|---|---|
 | `.place-card__source` | 검색결과 출처 뱃지(카카오/구글), `.place-card`의 항상 존재하는 첫 자식 | 구현됨 (v0.3.1, logic 확정) |
 | `.place-card__rating` | 평점 텍스트, 값 있을 때만 조건부 렌더링되는 `<p>` | 구현됨 (v0.3.1, logic 확정) |
-| `.place-card__photo-wrap` / `.place-card__photo` | 사진 썸네일 | 스타일만 존재, **구현 보류**(Google Photo API 미연동) |
+| `.place-card__photo-wrap` / `.place-card__photo` | 사진 썸네일 | 구현됨 (v0.5, `api/place-photo.js` 프록시로 Google Photo API 연동) |
 | `.review-panel` 및 하위 요소(`__header`, `__name`, `__close-btn`, `__rating`, `__loading`, `__not-found`, `__list`, `__map-link`), `.review-item` 및 하위 요소(`__author`, `__rating`, `__date`, `__content`) | "가게 클릭 → 리뷰 패널" 기능 | 구현됨 (v0.4, logic 확정) |
+| `.review-item--ad-suspected`, `.review-item__ad-flags` | 협찬/체험단 의심 리뷰 표시(규칙 기반) | 구현됨 (v0.5) |
 
-이번 스프린트의 logic(구글 플레이스 검색 + 리뷰 패널)/design(스타일링) 병렬 작업은 v0.4로 마무리됐다. `.place-card__photo`만 API 제약으로 보류 상태이며, 나머지는 모두 실제 마크업과 스타일이 일치한다.
+v0.4까지 logic(구글 플레이스 검색 + 리뷰 패널)/design(스타일링) 병렬 작업이 마무리됐고, v0.5에서 사진 연동과 협찬 의심 리뷰 표시가 추가로 구현되어 이제 모든 class가 실제 마크업과 스타일이 일치한다.
