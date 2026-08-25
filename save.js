@@ -29,6 +29,23 @@ import {
   isPlaceSaved,
   waitForSavedPlaces,
 } from "./saved-places.js";
+import { showUndoToast } from "./toast.js";
+
+// 로그인하지 않은 상태에서 "담기"를 눌렀을 때, 로그인에 성공하면 다시 누르지 않아도
+// 방금 누르려던 가게가 자동으로 담기도록 기억해두는 슬롯. 로그인 모달을 통하지 않은
+// 로그인(예: 헤더 로그인)이면 그냥 무시된다.
+let pendingSave = null;
+
+/** fetch 자체가 실패한 네트워크 오류는 사용자에게 더 명확한 한국어 안내로 바꿔준다.
+ *  fetchPlaces()처럼 원본 TypeError를 일반 Error로 다시 감싸는 곳도 있어서, 타입뿐
+ *  아니라 메시지 패턴("Failed to fetch" 등)도 함께 확인한다. */
+function friendlyError(err, fallback) {
+  const message = (err && err.message) || "";
+  if (err instanceof TypeError || /failed to fetch|network ?error|load failed/i.test(message)) {
+    return "네트워크 연결을 확인해주세요.";
+  }
+  return message || fallback;
+}
 
 // 로컬에서 server.py(파이썬 프록시)로 개발할 땐 localhost:8000을 호출하고,
 // Vercel 등 배포 환경에서는 같은 오리진의 /api/search(api/ 디렉토리의 Vercel
@@ -221,6 +238,18 @@ function normalizeGooglePlace(googlePlace) {
   };
 }
 
+/** saved_places 행(entry)을 savePlace()가 기대하는 place 형태로 되돌린다(삭제 되돌리기용). */
+function entryToPlace(entry) {
+  return {
+    place_name: entry.place_name,
+    category_name: entry.category,
+    address_name: entry.address,
+    road_address_name: "",
+    x: entry.lng,
+    y: entry.lat,
+  };
+}
+
 /** place로부터 saved_places 테이블에서 쓰는 고유 id를 만든다("kakao-<id>" | "google-<id>"). */
 function getPlaceId(place) {
   const prefix = place.source === "google" ? "google" : "kakao";
@@ -310,6 +339,7 @@ function setSaveButtonState(btn, saved) {
 /** "담기"/"담음" 버튼 클릭 핸들러. 로그인하지 않았으면 안내와 함께 로그인 모달을 연다. */
 async function handleSaveClick(place, placeId, btn) {
   if (!getCurrentUser()) {
+    pendingSave = { place, placeId, btn };
     promptLogin("로그인하면 담을 수 있어요.");
     return;
   }
@@ -318,14 +348,25 @@ async function handleSaveClick(place, placeId, btn) {
   try {
     if (isPlaceSaved(placeId)) {
       await removePlace(placeId);
+      setSaveButtonState(btn, false);
+      showUndoToast("담기를 취소했어요", async () => {
+        try {
+          await savePlace(place, placeId);
+          setSaveButtonState(btn, true);
+          renderSavedList();
+        } catch (err) {
+          console.error("[save.js] 담기 되돌리기 실패:", err);
+          setStatus(friendlyError(err, "되돌리기에 실패했습니다."));
+        }
+      });
     } else {
       await savePlace(place, placeId);
+      setSaveButtonState(btn, true);
     }
-    setSaveButtonState(btn, isPlaceSaved(placeId));
     renderSavedList();
   } catch (err) {
     console.error("[save.js] 담기 처리 실패:", err);
-    setStatus(err.message || "담기 처리 중 오류가 발생했습니다.");
+    setStatus(friendlyError(err, "담기 처리 중 오류가 발생했습니다."));
   } finally {
     btn.disabled = false;
   }
@@ -495,7 +536,7 @@ async function maybeStartAnalysis(place, cacheKey, reviewResult) {
     console.error("[save.js] 리뷰 분석 실패:", err);
     analysisLoading.hidden = true;
     analysisContent.hidden = true;
-    analysisError.textContent = err.message || "리뷰 분석에 실패했습니다.";
+    analysisError.textContent = friendlyError(err, "리뷰 분석에 실패했습니다.");
     analysisError.hidden = false;
   }
 }
@@ -597,7 +638,7 @@ async function openReviewPanel(place) {
     reviewPanelLoading.hidden = true;
     reviewPanelList.innerHTML = "";
     reviewPanelMapLink.hidden = true;
-    reviewPanelNotFound.textContent = err.message || "리뷰를 불러오지 못했습니다.";
+    reviewPanelNotFound.textContent = friendlyError(err, "리뷰를 불러오지 못했습니다.");
     reviewPanelNotFound.hidden = false;
     reviewPanelAnalysis.hidden = true;
   }
@@ -637,10 +678,21 @@ function createSavedItem(entry) {
         `.place-card[data-place-id="${CSS.escape(entry.place_id || "")}"] .place-card__save-btn`
       );
       if (cardBtn) setSaveButtonState(cardBtn, false);
+
+      showUndoToast("삭제했어요", async () => {
+        try {
+          await savePlace(entryToPlace(entry), entry.place_id);
+          renderSavedList();
+          if (cardBtn) setSaveButtonState(cardBtn, true);
+        } catch (err) {
+          console.error("[save.js] 삭제 되돌리기 실패:", err);
+          setStatus(friendlyError(err, "되돌리기에 실패했습니다."));
+        }
+      });
     } catch (err) {
       console.error("[save.js] 담은 맛집 삭제 실패:", err);
       removeBtn.disabled = false;
-      setStatus(err.message || "삭제 중 오류가 발생했습니다.");
+      setStatus(friendlyError(err, "삭제 중 오류가 발생했습니다."));
     }
   });
   item.appendChild(removeBtn);
@@ -676,11 +728,8 @@ async function refreshSaveButtons() {
   });
 }
 
-async function handleSearchSubmit(event) {
-  event.preventDefault();
-  const query = searchInput.value.trim();
-  const categoryGroupCode = categorySelect.value;
-
+/** 검색을 실제로 실행한다. form submit과 ?q= 자동 검색이 이 함수를 공유한다. */
+async function runSearch(query, categoryGroupCode) {
   if (!query) {
     setStatus("검색어를 입력해주세요.");
     return;
@@ -694,19 +743,40 @@ async function handleSearchSubmit(event) {
     renderPlaceCards(places);
   } catch (err) {
     console.error("[save.js] 검색 실패:", err);
-    setStatus(err.message || "검색 중 오류가 발생했습니다.");
+    setStatus(friendlyError(err, "검색 중 오류가 발생했습니다."));
   }
+}
+
+function handleSearchSubmit(event) {
+  event.preventDefault();
+  runSearch(searchInput.value.trim(), categorySelect.value);
+}
+
+/** 로그인 모달을 거쳐 로그인에 성공하면, 로그인 전 누르려던 "담기"를 자동으로 이어서 실행한다. */
+function resumePendingSave(user) {
+  if (!user || !pendingSave) return;
+  const { place, placeId, btn } = pendingSave;
+  pendingSave = null;
+  if (document.body.contains(btn)) handleSaveClick(place, placeId, btn);
 }
 
 function init() {
   searchForm.addEventListener("submit", handleSearchSubmit);
   reviewPanelCloseBtn.addEventListener("click", closeReviewPanel);
   analysisToggle.addEventListener("click", toggleAnalysisBody);
-  onAuthChange(() => {
+  onAuthChange((user) => {
     renderSavedList();
     refreshSaveButtons();
+    resumePendingSave(user);
   });
   renderSavedList();
+
+  // 홈 화면 검색창(index.html)에서 ?q=검색어 로 들어오면 곧바로 검색을 실행한다.
+  const queryFromUrl = new URLSearchParams(location.search).get("q");
+  if (queryFromUrl) {
+    searchInput.value = queryFromUrl;
+    runSearch(queryFromUrl, categorySelect.value);
+  }
 }
 
 init();

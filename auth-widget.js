@@ -21,6 +21,7 @@ let errorEl = null;
 let hintEl = null;
 let loginBtn = null;
 let signupBtn = null;
+let lastFocusedEl = null;
 
 function displayName(user) {
   return user.email ? user.email.split("@")[0] : "회원";
@@ -93,7 +94,12 @@ function buildModal() {
     if (event.target === overlay) closeModal();
   });
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !overlay.hidden) closeModal();
+    if (overlay.hidden) return;
+    if (event.key === "Escape") {
+      closeModal();
+      return;
+    }
+    if (event.key === "Tab") trapFocus(event);
   });
 
   form.addEventListener("submit", (event) => {
@@ -105,12 +111,36 @@ function buildModal() {
   });
 }
 
+/** overlay 안의 포커스 가능한 요소들(Tab 순서대로). */
+function getFocusable() {
+  return Array.from(overlay.querySelectorAll("input, button")).filter(
+    (el) => !el.disabled && el.tabIndex !== -1
+  );
+}
+
+/** 모달이 열려 있는 동안 Tab이 배경 요소로 빠져나가지 않도록 첫/마지막 요소 사이를 순환시킨다. */
+function trapFocus(event) {
+  const focusable = getFocusable();
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 function openModal(hint) {
   if (!overlay) buildModal();
   clearError();
   form.reset();
   hintEl.textContent = hint || "";
   hintEl.hidden = !hint;
+  lastFocusedEl = document.activeElement;
   overlay.hidden = false;
   emailInput.focus();
 }
@@ -121,7 +151,10 @@ export function promptLogin(hint) {
 }
 
 function closeModal() {
-  if (overlay) overlay.hidden = true;
+  if (!overlay || overlay.hidden) return;
+  overlay.hidden = true;
+  if (lastFocusedEl && document.body.contains(lastFocusedEl)) lastFocusedEl.focus();
+  lastFocusedEl = null;
 }
 
 function clearError() {

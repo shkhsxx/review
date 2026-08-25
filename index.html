@@ -61,6 +61,13 @@
           </a>
           <span class="btn-note">가입 없이 30초 · 이메일도 나중에</span>
         </div>
+        <form class="hero-search" id="hero-search-form">
+          <label class="sr" for="hero-search-input">가게 이름으로 바로 검색</label>
+          <input type="text" id="hero-search-input" placeholder="가게 이름으로 바로 검색" autocomplete="off">
+          <button type="submit" class="hero-search__btn" aria-label="검색">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="2"/><path d="m20 20-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </form>
       </div>
 
       <div class="stack" aria-hidden="true">
@@ -491,6 +498,14 @@ document.querySelectorAll('.rv').forEach(el=>io.observe(el));
 /* ---------- 헤더 ---------- */
 const hdr=document.getElementById('hdr');
 addEventListener('scroll',()=>hdr.classList.toggle('stuck', scrollY>8), {passive:true});
+
+/* ---------- 홈 화면 바로 검색 ---------- */
+document.getElementById('hero-search-form').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const q = document.getElementById('hero-search-input').value.trim();
+  if(!q) return;
+  location.href = 'save.html?q=' + encodeURIComponent(q);
+});
 </script>
 <script type="module" src="auth-widget.js"></script>
 <script type="module" src="tabbar.js"></script>

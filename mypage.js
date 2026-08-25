@@ -10,7 +10,8 @@
 
 import { getCurrentUser, onAuthChange } from "./auth.js";
 import { promptLogin } from "./auth-widget.js";
-import { getSavedPlaces, removePlace } from "./saved-places.js";
+import { getSavedPlaces, savePlace, removePlace } from "./saved-places.js";
+import { showUndoToast } from "./toast.js";
 
 const pocketList = document.getElementById("pocket-list");
 const pocketEmpty = document.getElementById("pocket-empty");
@@ -41,7 +42,7 @@ function createPocketCard(entry) {
   removeBtn.className = "pocket-card__remove-btn";
   removeBtn.textContent = "✕";
   removeBtn.setAttribute("aria-label", "삭제");
-  removeBtn.addEventListener("click", () => handleRemove(entry.place_id, card, removeBtn));
+  removeBtn.addEventListener("click", () => handleRemove(entry, card, removeBtn));
   card.appendChild(removeBtn);
 
   const name = document.createElement("h2");
@@ -80,13 +81,34 @@ function createPocketCard(entry) {
   return card;
 }
 
-/** X 버튼 클릭 시 테이블에서 삭제하고, 성공하면 카드도 목록에서 뺀다. */
-async function handleRemove(placeId, card, btn) {
+/** saved_places 행(entry)을 savePlace()가 기대하는 place 형태로 되돌린다(삭제 되돌리기용). */
+function entryToPlace(entry) {
+  return {
+    place_name: entry.place_name,
+    category_name: entry.category,
+    address_name: entry.address,
+    road_address_name: "",
+    x: entry.lng,
+    y: entry.lat,
+  };
+}
+
+/** X 버튼 클릭 시 테이블에서 삭제하고, 성공하면 카드도 목록에서 뺀다(몇 초간 되돌리기 가능). */
+async function handleRemove(entry, card, btn) {
   btn.disabled = true;
   try {
-    await removePlace(placeId);
+    await removePlace(entry.place_id);
     card.remove();
     if (!pocketList.children.length) renderEmptyState();
+
+    showUndoToast("삭제했어요", async () => {
+      try {
+        await savePlace(entryToPlace(entry), entry.place_id);
+        render();
+      } catch (err) {
+        console.error("[mypage.js] 삭제 되돌리기 실패:", err);
+      }
+    });
   } catch (err) {
     console.error("[mypage.js] 삭제 실패:", err);
     btn.disabled = false;

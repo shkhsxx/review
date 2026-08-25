@@ -169,6 +169,23 @@ header.stuck{border-bottom-color:var(--border-soft)}
   .btn-note{text-align:center}
 }
 
+.hero-search{
+  display:flex;align-items:center;gap:8px;margin-top:22px;max-width:360px;
+  background:var(--white);border:1px solid var(--border);border-radius:var(--r-pill);
+  padding:5px 5px 5px 18px;box-shadow:var(--shadow-sm);
+}
+.hero-search input{
+  flex:1;min-width:0;border:0;background:none;font:inherit;font-size:.9375rem;
+  font-weight:500;color:var(--ink);outline:none;
+}
+.hero-search input::placeholder{color:var(--ink-3)}
+.hero-search__btn{
+  flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  background:var(--bg-soft);color:var(--ink-2);transition:background .16s ease,color .16s ease;
+}
+.hero-search__btn:hover{background:var(--ink);color:#fff}
+@media(max-width:560px){.hero-search{max-width:none}}
+
 /* floating cards */
 .stack{display:grid;gap:var(--sp-4)}
 .fcard{background:var(--white);border-radius:var(--r-lg);box-shadow:var(--shadow-md);
@@ -328,6 +345,20 @@ footer{padding-block:48px;border-top:1px solid var(--border-soft);margin-top:cla
 .foot nav{display:flex;gap:22px;flex-wrap:wrap}
 .foot nav a{transition:color .16s ease}
 .foot nav a:hover{color:var(--coral);text-decoration:underline;text-underline-offset:3px}
+
+/* ---------- 실행취소 토스트 (toast.js가 렌더링) ---------- */
+.toast{
+  position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(12px);
+  display:flex;align-items:center;gap:16px;max-width:calc(100vw - 40px);
+  background:var(--ink);color:var(--bg);padding:14px 18px;border-radius:var(--r-pill);
+  box-shadow:var(--shadow-lg);font-size:.9375rem;font-weight:600;
+  z-index:120;opacity:0;transition:opacity .2s ease,transform .2s ease;
+}
+.toast[hidden]{display:none}
+.toast--show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast__undo-btn{flex:none;color:var(--butter);font-weight:800}
+.toast__undo-btn:hover{text-decoration:underline;text-underline-offset:3px}
+@media(max-width:560px){.toast{bottom:calc(70px + env(safe-area-inset-bottom))}}
 
 /* ---------- Reveal ---------- */
 .rv{opacity:0;transform:translateY(20px);transition:opacity .48s var(--ease),transform .48s var(--ease)}
