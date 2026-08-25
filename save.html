@@ -121,7 +121,10 @@
 <div class="save-page">
   <header class="save-header">
     <div class="save-header__top">
-      <a class="save-header__back" href="index.html">← 홈으로</a>
+      <div class="save-header__top-left">
+        <a class="save-header__back" href="index.html">← 홈으로</a>
+        <a class="btn btn-ghost btn-sm" href="mypage.html" id="pocket-link" hidden>맛집주머니</a>
+      </div>
       <div class="auth-slot" id="auth-slot"></div>
     </div>
     <h1 class="save-header__title">맛집 담기</h1>
@@ -229,5 +232,10 @@
 <script type="module" src="auth-widget.js"></script>
 <script type="module" src="tabbar.js"></script>
 <script type="module" src="save.js"></script>
+<script type="module">
+  import { onAuthChange } from "./auth.js";
+  const pocketLink = document.getElementById("pocket-link");
+  onAuthChange((user) => { pocketLink.hidden = !user; });
+</script>
 </body>
 </html>

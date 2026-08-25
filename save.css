@@ -15,6 +15,7 @@
 
 .save-header{padding-block:clamp(28px,5vw,48px) clamp(20px,3vw,32px)}
 .save-header__top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.save-header__top-left{display:flex;align-items:center;gap:12px}
 .save-header__back{
   display:inline-flex;align-items:center;gap:6px;
   font-size:.9375rem;font-weight:700;color:var(--ink-2);
